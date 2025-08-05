@@ -1,9 +1,9 @@
 /* --- Variables de Color y Fuentes --- */
 :root {
-    --color-primario: #007BFF; /* Azul vibrante */
-    --color-secundario: #343A40; /* Gris oscuro para texto */
-    --color-fondo: #F8F9FA; /* Gris claro para el fondo */
-    --color-blanco: #FFFFFF;
+    --color-primario: #2eaa34; /* Azul vibrante */
+    --color-secundario: #00ab75; /* Gris oscuro para texto */
+    --color-fondo: #fffff1; /* Gris claro para el fondo */
+    --color-blanco: #fffff1;
     --fuente-principal: 'Arial', sans-serif;
     --sombra-caja: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
@@ -40,7 +40,7 @@ nav a {
 }
 
 nav a:hover {
-    color: var(--color-primario);
+    color: var(#51ff00);
 }
 
 /* --- Contenido Principal --- */
@@ -74,7 +74,7 @@ main {
 }
 
 .button:hover {
-    background-color: #0056b3; /* Un azul más oscuro */
+    background-color: #51ff00; /* Un azul más oscuro */
 }
 
 /* --- Pie de Página --- */
