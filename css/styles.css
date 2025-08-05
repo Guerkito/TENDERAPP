@@ -1,0 +1,89 @@
+/* --- Variables de Color y Fuentes --- */
+:root {
+    --color-primario: #007BFF; /* Azul vibrante */
+    --color-secundario: #343A40; /* Gris oscuro para texto */
+    --color-fondo: #F8F9FA; /* Gris claro para el fondo */
+    --color-blanco: #FFFFFF;
+    --fuente-principal: 'Arial', sans-serif;
+    --sombra-caja: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* --- Estilos Generales del Cuerpo --- */
+body {
+    font-family: var(--fuente-principal);
+    margin: 0;
+    background-color: var(--color-fondo);
+    color: var(--color-secundario);
+    line-height: 1.6;
+}
+
+/* --- Encabezado y Navegación --- */
+header {
+    background-color: var(--color-secundario);
+    color: var(--color-blanco);
+    padding: 1rem 0;
+    text-align: center;
+    box-shadow: var(--sombra-caja);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 2.5rem;
+}
+
+nav a {
+    color: var(--color-blanco);
+    margin: 0 15px;
+    text-decoration: none;
+    font-size: 1.1rem;
+    transition: color 0.3s ease;
+}
+
+nav a:hover {
+    color: var(--color-primario);
+}
+
+/* --- Contenido Principal --- */
+main {
+    padding: 20px;
+    max-width: 900px;
+    margin: 20px auto; /* Centra el contenido */
+}
+
+.card {
+    background-color: var(--color-blanco);
+    padding: 25px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: var(--sombra-caja);
+}
+
+.card h2 {
+    color: var(--color-primario);
+}
+
+/* --- Botones --- */
+.button {
+    display: inline-block;
+    background-color: var(--color-primario);
+    color: var(--color-blanco);
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.button:hover {
+    background-color: #0056b3; /* Un azul más oscuro */
+}
+
+/* --- Pie de Página --- */
+footer {
+    text-align: center;
+    padding: 20px;
+    background-color: var(--color-secundario);
+    color: var(--color-blanco);
+    position: relative;
+    bottom: 0;
+    width: 100%;
+}
