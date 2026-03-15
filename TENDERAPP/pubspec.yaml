@@ -1,0 +1,49 @@
+name: tenderapp
+description: A new Flutter project.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^1.0.2
+  sqflite: ^2.3.3+1
+  path: ^1.8.3 # Used for joining paths, common with sqflite
+  provider: ^6.0.0
+  flutter_barcode_scanner: any # Se ajusta a 'any' para resolución automática de versión
+  table_calendar: ^3.0.9
+  # flutter_vector_icons: ^2.0.0 # Removed in favor of phosphor_flutter
+  fl_chart: ^0.68.0
+  phosphor_flutter: ^2.0.0 # Added phosphor_flutter
+  path_provider: any # Se ajusta a 'any' para resolución automática de versión
+  sqflite_common_ffi: ^2.3.3 # Updated sqflite_common_ffi
+  intl: ^0.20.2
+  url_launcher: ^6.3.1
+  pdf: ^3.10.4
+  printing: ^5.11.0
+  flutter_local_notifications: ^17.2.2
+  timezone: ^0.9.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/logo.jpg"
+  min_sdk_android: 21
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/logo.jpg
