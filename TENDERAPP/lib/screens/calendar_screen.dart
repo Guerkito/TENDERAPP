@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
-import '../models/product_model.dart';
-import '../providers/product_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import '../providers/calendar_provider.dart';
 import '../providers/supplier_provider.dart';
-import '../api/currency_formatter.dart';
-import '../widgets/info_banner.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -18,156 +16,186 @@ class _CalendarScreenState extends State<CalendarScreen> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  bool _showTutorial = true;
 
   @override
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
+      Provider.of<CalendarProvider>(context, listen: false).loadAppointments();
       Provider.of<SupplierProvider>(context, listen: false).loadSuppliers();
-      Provider.of<ProductProvider>(context, listen: false).loadProducts();
     });
   }
 
-  void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
-    if (!isSameDay(_selectedDay, selectedDay)) {
-      setState(() {
-        _selectedDay = selectedDay;
-        _focusedDay = focusedDay;
-      });
-    }
-  }
+  void _showAddAppointmentDialog() {
+    final supplierProvider = Provider.of<SupplierProvider>(context, listen: false);
+    int? selectedSupplierId;
+    final notesController = TextEditingController();
 
-  List<Product> _getEventsForDay(DateTime day, List<Product> allProducts) {
-    return allProducts.where((product) {
-      if (product.expirationDate == null) return false;
-      try {
-        final expiryDate = DateTime.parse(product.expirationDate!);
-        return isSameDay(expiryDate, day);
-      } catch (e) {
-        return false;
-      }
-    }).toList();
+    if (supplierProvider.suppliers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Agregue proveedores primero')));
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 24, right: 24, top: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Agendar Proveedor', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            DropdownButtonFormField<int>(
+              decoration: InputDecoration(
+                labelText: 'Seleccionar Proveedor',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              items: supplierProvider.suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
+              onChanged: (val) => selectedSupplierId = val,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: notesController,
+              decoration: InputDecoration(
+                labelText: 'Notas / Pedido',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (selectedSupplierId != null && _selectedDay != null) {
+                    Provider.of<CalendarProvider>(context, listen: false)
+                        .addAppointment(selectedSupplierId!, _selectedDay!, notesController.text);
+                    Navigator.pop(context);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00DF82),
+                  foregroundColor: const Color(0xFF1A3C2B),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: const Text('AGENDAR VISITA', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final productProvider = Provider.of<ProductProvider>(context);
-    final selectedEvents = _getEventsForDay(_selectedDay!, productProvider.products);
+    final appointments = Provider.of<CalendarProvider>(context).appointments;
+    final selectedAppointments = appointments[DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day)] ?? [];
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text('Calendario de Negocio'),
+        title: const Text('Agenda de Proveedores'),
+        backgroundColor: Colors.white,
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              // Banner Guía
-              if (_showTutorial)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: InfoBanner(
-                    text: 'Mantente al día con los vencimientos de productos y visitas de proveedores marcadas en el calendario.',
-                    icon: Icons.calendar_month,
-                    color: Colors.indigo,
-                    onClose: () => setState(() => _showTutorial = false),
-                  ),
-                ),
-              
-              // Calendario
-              Container(
-                margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-                ),
-                child: TableCalendar(
-                  locale: 'es_ES', 
-                  firstDay: DateTime.utc(2020, 1, 1),
-                  lastDay: DateTime.utc(2030, 12, 31),
-                  focusedDay: _focusedDay,
-                  calendarFormat: _calendarFormat,
-                  startingDayOfWeek: StartingDayOfWeek.monday,
-                  headerStyle: const HeaderStyle(
-                    formatButtonVisible: false,
-                    titleCentered: true,
-                    titleTextStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                  ),
-                  calendarStyle: CalendarStyle(
-                    todayDecoration: BoxDecoration(color: const Color(0xFF00DF82).withOpacity(0.3), shape: BoxShape.circle),
-                    selectedDecoration: const BoxDecoration(color: Color(0xFF00DF82), shape: BoxShape.circle),
-                    markerDecoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
-                  ),
-                  selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                  onDaySelected: _onDaySelected,
-                  onFormatChanged: (format) {
-                    if (_calendarFormat != format) {
-                      setState(() => _calendarFormat = format);
-                    }
-                  },
-                  onPageChanged: (focusedDay) => _focusedDay = focusedDay,
-                  eventLoader: (day) => _getEventsForDay(day, productProvider.products),
-                ),
+      body: Column(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
+            ),
+            child: TableCalendar(
+              firstDay: DateTime.utc(2020, 1, 1),
+              lastDay: DateTime.utc(2030, 12, 31),
+              focusedDay: _focusedDay,
+              calendarFormat: _calendarFormat,
+              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+              onDaySelected: (selectedDay, focusedDay) {
+                setState(() {
+                  _selectedDay = selectedDay;
+                  _focusedDay = focusedDay;
+                });
+              },
+              onFormatChanged: (format) {
+                if (_calendarFormat != format) setState(() => _calendarFormat = format);
+              },
+              eventLoader: (day) {
+                return appointments[DateTime(day.year, day.month, day.day)] ?? [];
+              },
+              calendarStyle: const CalendarStyle(
+                todayDecoration: BoxDecoration(color: Color(0x3300DF82), shape: BoxShape.circle),
+                selectedDecoration: BoxDecoration(color: Color(0xFF00DF82), shape: BoxShape.circle),
+                selectedTextStyle: TextStyle(color: Color(0xFF1A3C2B), fontWeight: FontWeight.bold),
+                markerDecoration: BoxDecoration(color: Color(0xFF1A3C2B), shape: BoxShape.circle),
               ),
-              
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20.0),
-                child: Row(
-                  children: [
-                    Icon(Icons.event_note, color: Colors.grey, size: 18),
-                    const SizedBox(width: 8),
-                    Text('VENCIMIENTOS Y NOTAS', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 12)),
-                  ],
-                ),
+              headerStyle: const HeaderStyle(
+                formatButtonVisible: false,
+                titleCentered: true,
+                titleTextStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
-              
-              const SizedBox(height: 10),
-              
-              // Lista de Eventos (Vencimientos)
-              selectedEvents.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(40.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.calendar_today_outlined, size: 48, color: Colors.grey[300]),
-                          const SizedBox(height: 16),
-                          Text('No hay vencimientos para este día', style: TextStyle(color: Colors.grey[400])),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: selectedEvents.length,
-                      itemBuilder: (context, index) {
-                        final product = selectedEvents[index];
-                        return Card(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            leading: const CircleAvatar(
-                              backgroundColor: Color(0xFFFFEBEE),
-                              child: Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
-                            ),
-                            title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text('Stock: ${product.stock} ${product.unit ?? ""}'),
-                            trailing: Text(
-                              CurrencyFormatter.format(product.salePrice),
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-              const SizedBox(height: 30),
-            ],
+            ),
           ),
-        ),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _selectedDay == null ? 'Selecciona un día' : DateFormat('EEEE, d MMMM', 'es_ES').format(_selectedDay!),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A)),
+                ),
+                IconButton.filledTonal(
+                  onPressed: _showAddAppointmentDialog,
+                  icon: const Icon(Icons.add),
+                  style: IconButton.styleFrom(backgroundColor: const Color(0xFF00DF82).withOpacity(0.2)),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: selectedAppointments.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.event_available_outlined, size: 64, color: Colors.grey[300]),
+                        const SizedBox(height: 16),
+                        Text('Sin visitas para este día', style: TextStyle(color: Colors.grey[500])),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(24),
+                    itemCount: selectedAppointments.length,
+                    itemBuilder: (context, index) {
+                      final appt = selectedAppointments[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: const Color(0xFF1A3C2B).withOpacity(0.1),
+                            child: const Icon(Icons.local_shipping, color: Color(0xFF1A3C2B)),
+                          ),
+                          title: Text(appt['supplier_name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text(appt['notes'] ?? 'Sin notas'),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.red),
+                            onPressed: () => Provider.of<CalendarProvider>(context, listen: false).deleteAppointment(appt['id']),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }

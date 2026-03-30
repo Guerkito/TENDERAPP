@@ -11,6 +11,7 @@ class Product {
   String? expirationDate; // Keeping for backward compatibility (primary/first batch)
   String productType; // 'product' or 'fruver'
   String? unit; // 'kg', 'lb', 'unit', etc.
+  String? category; // Added Category field
   List<ProductBatch> batches;
 
   Product({
@@ -24,6 +25,7 @@ class Product {
     this.expirationDate,
     this.productType = 'product',
     this.unit,
+    this.category,
     this.batches = const [],
   });
 
@@ -39,6 +41,7 @@ class Product {
       'expiration_date': expirationDate,
       'product_type': productType,
       'unit': unit,
+      'category': category,
     };
   }
 
@@ -59,6 +62,7 @@ class Product {
       expirationDate: map['expiration_date'],
       productType: map['product_type'] ?? 'product',
       unit: map['unit'],
+      category: map['category'],
       batches: batches,
     );
   }

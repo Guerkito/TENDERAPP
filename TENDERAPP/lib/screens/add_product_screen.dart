@@ -26,6 +26,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   late TextEditingController _stockController;
   late TextEditingController _expirationDateController;
   late TextEditingController _unitController;
+  late TextEditingController _categoryController;
   String _productType = 'product';
 
   DateTime? _selectedExpirationDate;
@@ -38,8 +39,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
         TextEditingController(text: widget.product?.barcode ?? '');
     _descriptionController =
         TextEditingController(text: widget.product?.description ?? '');
+    _categoryController = TextEditingController(text: widget.product?.category ?? 'General');
     
-    // Formatear precios iniciales con separador de miles
     final formatter = NumberFormat.decimalPattern('es_CO');
     _purchasePriceController = TextEditingController(
         text: widget.product != null ? formatter.format(widget.product!.purchasePrice) : '');
@@ -69,23 +70,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _stockController.dispose();
     _expirationDateController.dispose();
     _unitController.dispose();
+    _categoryController.dispose();
     super.dispose();
   }
 
   Future<void> _scanBarcode() async {
-    String barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
-      '#ff6666',
-      'Cancelar',
-      true,
-      ScanMode.BARCODE,
-    );
-
+    String barcodeScanRes = await FlutterBarcodeScanner.scanBarcode('#ff6666', 'Cancelar', true, ScanMode.BARCODE);
     if (!mounted) return;
-
     if (barcodeScanRes != '-1') {
-      setState(() {
-        _barcodeController.text = barcodeScanRes;
-      });
+      setState(() => _barcodeController.text = barcodeScanRes);
     }
   }
 
@@ -96,7 +89,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       firstDate: DateTime.now(),
       lastDate: DateTime(2101),
     );
-    if (picked != null && picked != _selectedExpirationDate) {
+    if (picked != null) {
       setState(() {
         _selectedExpirationDate = picked;
         _expirationDateController.text = picked.toLocal().toString().split(' ')[0];
@@ -107,9 +100,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   void _saveProduct() async {
     if (_formKey.currentState!.validate()) {
       try {
-        final productProvider =
-            Provider.of<ProductProvider>(context, listen: false);
-
+        final productProvider = Provider.of<ProductProvider>(context, listen: false);
         final newProduct = Product(
           id: widget.product?.id,
           name: _nameController.text,
@@ -121,174 +112,206 @@ class _AddProductScreenState extends State<AddProductScreen> {
           expirationDate: _selectedExpirationDate?.toIso8601String(),
           productType: _productType,
           unit: _unitController.text.isNotEmpty ? _unitController.text : null,
+          category: _categoryController.text.isNotEmpty ? _categoryController.text : 'General',
         );
 
         if (widget.product == null) {
           await productProvider.addProduct(newProduct);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Producto agregado con éxito!')),
-            );
-          }
         } else {
           await productProvider.updateProduct(newProduct);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Producto actualizado con éxito!')),
-            );
-          }
         }
-        if (mounted) {
-          Navigator.of(context).pop();
-        }
+        if (mounted) Navigator.pop(context);
       } catch (e) {
-        print('Error saving product: $e');
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('Error al guardar'),
-              content: Text('No se pudo guardar el producto. Detalles: $e'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Cerrar'),
-                ),
-              ],
-            ),
-          );
-        }
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor revisa los campos obligatorios')),
-      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: Text(widget.product == null ? 'Agregar Producto' : 'Editar Producto'),
+        title: Text(widget.product == null ? 'Nuevo Producto' : 'Editar Producto'),
+        backgroundColor: Colors.white,
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          padding: const EdgeInsets.all(24.0),
           child: Form(
             key: _formKey,
             child: ListView(
               children: <Widget>[
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Nombre del Producto'),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor ingrese un nombre';
-                    }
-                    return null;
-                  },
+                  decoration: InputDecoration(
+                    labelText: 'Nombre del Producto',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  validator: (v) => v!.isEmpty ? 'Requerido' : null,
                 ),
+                const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   value: _productType,
-                  decoration: const InputDecoration(labelText: 'Tipo de Producto'),
+                  decoration: InputDecoration(
+                    labelText: 'Tipo',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
                   items: const [
-                    DropdownMenuItem(value: 'product', child: Text('Producto (con código de barras)')),
-                    DropdownMenuItem(value: 'fruver', child: Text('Fruver (sin código de barras)')),
+                    DropdownMenuItem(value: 'product', child: Text('General / Abarrote')),
+                    DropdownMenuItem(value: 'fruver', child: Text('Fruver / Pesable')),
                   ],
-                  onChanged: (value) {
-                    setState(() {
-                      _productType = value!;
-                    });
+                  onChanged: (v) => setState(() => _productType = v!),
+                ),
+                const SizedBox(height: 16),
+                Consumer<ProductProvider>(
+                  builder: (context, provider, child) {
+                    return Autocomplete<String>(
+                      initialValue: TextEditingValue(text: _categoryController.text),
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        if (textEditingValue.text == '') {
+                          return provider.categories;
+                        }
+                        return provider.categories.where((String option) {
+                          return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+                        });
+                      },
+                      onSelected: (String selection) {
+                        _categoryController.text = selection;
+                      },
+                      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                        // Sincronizar el controlador inicial con el controlador del campo de autocompletado
+                        if (controller.text.isEmpty && _categoryController.text.isNotEmpty) {
+                          controller.text = _categoryController.text;
+                        }
+                        return TextFormField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          decoration: InputDecoration(
+                            labelText: 'Categoría o Marca (Selecciona o escribe nueva)',
+                            hintText: 'Ej: Lácteos, Coca-Cola, Aseo',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                            filled: true,
+                            fillColor: Colors.white,
+                            suffixIcon: const Icon(Icons.search),
+                          ),
+                          onChanged: (value) {
+                            _categoryController.text = value;
+                          },
+                        );
+                      },
+                    );
                   },
                 ),
-                if (_productType == 'fruver')
-                  TextFormField(
-                    controller: _unitController,
-                    decoration: const InputDecoration(labelText: 'Unidad (ej. kg, lb, unidad)'),
-                    validator: (value) {
-                      if (_productType == 'fruver' && (value == null || value.isEmpty)) {
-                        return 'Por favor ingrese una unidad';
-                      }
-                      return null;
-                    },
-                  ),
+                const SizedBox(height: 16),
                 if (_productType != 'fruver')
                   Row(
                     children: [
                       Expanded(
                         child: TextFormField(
                           controller: _barcodeController,
-                          decoration: const InputDecoration(labelText: 'Código de Barras (Opcional)'),
+                          decoration: InputDecoration(
+                            labelText: 'Código de Barras',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.qr_code_scanner),
+                      const SizedBox(width: 8),
+                      IconButton.filled(
                         onPressed: _scanBarcode,
+                        icon: const Icon(Icons.qr_code_scanner),
+                        style: IconButton.styleFrom(backgroundColor: const Color(0xFF1A3C2B)),
                       ),
                     ],
                   ),
-                TextFormField(
-                  controller: _descriptionController,
-                  decoration: const InputDecoration(labelText: 'Descripción (Opcional)'),
-                  maxLines: 3,
+                if (_productType == 'fruver')
+                  TextFormField(
+                    controller: _unitController,
+                    decoration: InputDecoration(
+                      labelText: 'Unidad (kg, lb, unidad)',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _purchasePriceController,
+                        decoration: InputDecoration(
+                          labelText: 'Precio Compra',
+                          prefixText: '\$ ',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [ThousandSeparatorInputFormatter()],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _salePriceController,
+                        decoration: InputDecoration(
+                          labelText: 'Precio Venta',
+                          prefixText: '\$ ',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [ThousandSeparatorInputFormatter()],
+                      ),
+                    ),
+                  ],
                 ),
-                TextFormField(
-                  controller: _purchasePriceController,
-                  decoration: const InputDecoration(labelText: 'Precio de Compra', prefixText: '\$ '),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [ThousandSeparatorInputFormatter()],
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor ingrese el precio de compra';
-                    }
-                    return null;
-                  },
-                ),
-                TextFormField(
-                  controller: _salePriceController,
-                  decoration: const InputDecoration(labelText: 'Precio de Venta', prefixText: '\$ '),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [ThousandSeparatorInputFormatter()],
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor ingrese el precio de venta';
-                    }
-                    return null;
-                  },
-                ),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _stockController,
-                  decoration: const InputDecoration(labelText: 'Stock'),
+                  decoration: InputDecoration(
+                    labelText: 'Stock Inicial',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
                   keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor ingrese el stock';
-                    }
-                    if (int.tryParse(value) == null) {
-                      return 'Ingrese un número entero válido';
-                    }
-                    return null;
-                  },
                 ),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _expirationDateController,
                   decoration: InputDecoration(
-                    labelText: 'Fecha de Vencimiento (Opcional)',
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.calendar_today),
-                      onPressed: () => _selectExpirationDate(context),
-                    ),
+                    labelText: 'Vencimiento (Opcional)',
+                    suffixIcon: const Icon(Icons.calendar_today),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    filled: true,
+                    fillColor: Colors.white,
                   ),
                   readOnly: true,
                   onTap: () => _selectExpirationDate(context),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 32),
                 SizedBox(
-                  width: double.infinity,
+                  height: 56,
                   child: ElevatedButton(
                     onPressed: _saveProduct,
-                    child: Text(widget.product == null ? 'Guardar Producto' : 'Actualizar Producto'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00DF82),
+                      foregroundColor: const Color(0xFF1A3C2B),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: Text(
+                      widget.product == null ? 'GUARDAR PRODUCTO' : 'ACTUALIZAR',
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                    ),
                   ),
                 ),
               ],

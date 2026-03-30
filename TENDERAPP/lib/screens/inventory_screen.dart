@@ -19,6 +19,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _showTutorial = true;
+  String _selectedCategory = 'Todos';
 
   @override
   void initState() {
@@ -37,10 +38,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   Widget build(BuildContext context) {
     final productProvider = Provider.of<ProductProvider>(context);
+    final categories = ['Todos', ...productProvider.categories];
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text('Inventario'),
+        title: const Text('Inventario / Stock', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.picture_as_pdf),
@@ -55,21 +58,50 @@ class _InventoryScreenState extends State<InventoryScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Banner Guía con botón de cerrar
-            if (_showTutorial)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                child: InfoBanner(
-                  text: 'Administra aquí tus productos. Puedes ver el stock disponible, actualizar precios y agregar nuevos artículos.',
-                  icon: Icons.inventory_2,
-                  color: Colors.blue,
-                  onClose: () => setState(() => _showTutorial = false),
-                ),
+            // CATEGORY TABS (PILLS)
+            Container(
+              height: 60,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: categories.length,
+                itemBuilder: (context, index) {
+                  final cat = categories[index];
+                  final isSelected = _selectedCategory == cat;
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedCategory = cat),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFF00DF82) : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          if (!isSelected) BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          cat,
+                          style: TextStyle(
+                            color: isSelected ? const Color(0xFF1A3C2B) : Colors.grey[600],
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
-            
+            ),
+
             // Barra de Búsqueda
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+              padding: const EdgeInsets.fromLTRB(20, 5, 20, 10),
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
@@ -89,7 +121,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: Colors.grey[200],
+                  fillColor: Colors.white,
                 ),
                 onChanged: (value) {
                   setState(() {
@@ -107,14 +139,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     final filteredProducts = productProvider.products.where((product) {
                       final name = product.name.toLowerCase();
                       final barcode = (product.barcode ?? '').toLowerCase();
-                      return name.contains(_searchQuery) || barcode.contains(_searchQuery);
+                      final matchesSearch = name.contains(_searchQuery) || barcode.contains(_searchQuery);
+                      final matchesCategory = _selectedCategory == 'Todos' || product.category == _selectedCategory;
+                      return matchesSearch && matchesCategory;
                     }).toList();
 
                     if (filteredProducts.isEmpty) {
                       return Center(
                         child: Text(
                           _searchQuery.isEmpty 
-                            ? 'No hay productos en el inventario. Agrega uno!' 
+                            ? 'No hay productos en esta categoría.' 
                             : 'No se encontraron productos.',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
@@ -160,6 +194,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'inventory_fab',
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(

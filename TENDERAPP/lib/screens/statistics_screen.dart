@@ -55,6 +55,17 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         title: const Text('Estadísticas Financieras'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.table_chart),
+            tooltip: 'Exportar Excel',
+            onPressed: () => ReportGenerator.generateExcelReport(
+              statsProvider,
+              year: _selectedYear,
+              month: _selectedMonth,
+              day: _selectedDay,
+              storeName: Provider.of<SettingsProvider>(context, listen: false).storeName,
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.picture_as_pdf),
             tooltip: 'Exportar Reporte PDF',
             onPressed: () => ReportGenerator.generateFinancialReport(
@@ -365,59 +376,197 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   }
 
   Widget _buildFilters(BuildContext context) {
-    final daysInMonth = _getDaysInMonth(_selectedYear, _selectedMonth);
-
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          )
+        ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: DropdownButtonFormField<int>(
-              decoration: const InputDecoration(labelText: 'Año', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10)),
-              value: _selectedYear,
-              items: List.generate(5, (index) => DropdownMenuItem(value: DateTime.now().year - 2 + index, child: Text((DateTime.now().year - 2 + index).toString()))),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() => _selectedYear = value);
-                  _loadData();
-                }
-              },
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: DropdownButtonFormField<int>(
-              decoration: const InputDecoration(labelText: 'Mes', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10)),
-              value: _selectedMonth,
-              items: List.generate(12, (index) => DropdownMenuItem(value: index + 1, child: Text(_getMonthName(index + 1)))),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() => _selectedMonth = value);
-                  _loadData();
-                }
-              },
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: DropdownButtonFormField<int?>(
-              decoration: const InputDecoration(labelText: 'Día', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10)),
-              value: _selectedDay,
-              items: [
-                const DropdownMenuItem<int?>(value: null, child: Text('Todos')),
-                ...List.generate(daysInMonth, (index) => DropdownMenuItem(value: index + 1, child: Text((index + 1).toString()))),
+          // Year and Day Selectors (Horizontal Chips)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                _buildFilterChip(
+                  label: 'Año: $_selectedYear',
+                  icon: Icons.calendar_today_rounded,
+                  onTap: () => _showYearPicker(),
+                ),
+                const SizedBox(width: 12),
+                _buildFilterChip(
+                  label: _selectedDay == null ? 'Todo el mes' : 'Día: $_selectedDay',
+                  icon: Icons.today_rounded,
+                  onTap: () => _showDayPicker(),
+                ),
               ],
-              onChanged: (value) {
-                setState(() => _selectedDay = value);
-                _loadData();
-              },
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Month Selector (Horizontal Scroll)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: List.generate(12, (index) {
+                final month = index + 1;
+                final isSelected = _selectedMonth == month;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _selectedMonth = month);
+                    _loadData();
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFF00DF82) : const Color(0xFFF5F7FA),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _getMonthName(month, full: true),
+                      style: TextStyle(
+                        color: isSelected ? const Color(0xFF1A3C2B) : Colors.grey[600],
+                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                );
+              }),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip({required String label, required IconData icon, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A3C2B).withOpacity(0.05),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: const Color(0xFF1A3C2B)),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF1A3C2B),
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showYearPicker() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Seleccionar Año', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            Wrap(
+              spacing: 12,
+              children: List.generate(5, (index) {
+                final year = DateTime.now().year - 2 + index;
+                return ChoiceChip(
+                  label: Text(year.toString()),
+                  selected: _selectedYear == year,
+                  onSelected: (val) {
+                    setState(() => _selectedYear = year);
+                    _loadData();
+                    Navigator.pop(context);
+                  },
+                );
+              }),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDayPicker() {
+    final daysInMonth = _getDaysInMonth(_selectedYear, _selectedMonth);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            const Text('Seleccionar Día', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            Expanded(
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 5, mainAxisSpacing: 10, crossAxisSpacing: 10),
+                itemCount: daysInMonth + 1,
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return _buildDayItem(null, 'Todo');
+                  }
+                  return _buildDayItem(index, index.toString());
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDayItem(int? day, String label) {
+    final isSelected = _selectedDay == day;
+    return GestureDetector(
+      onTap: () {
+        setState(() => _selectedDay = day);
+        _loadData();
+        Navigator.pop(context);
+      },
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF00DF82) : const Color(0xFFF5F7FA),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF1A3C2B) : Colors.black87,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
       ),
     );
   }
@@ -427,31 +576,39 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   Widget _buildSummaryCard(BuildContext context, String title, String value, Color color, {IconData? icon, double? width}) {
     return Container(
       width: width,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.1), width: 1.5),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(color: color.withOpacity(0.06), blurRadius: 20, offset: const Offset(0, 10))
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (icon != null) Icon(icon, color: color, size: 28),
-          const SizedBox(height: 12),
-          Text(title, style: TextStyle(color: color.withOpacity(0.8), fontWeight: FontWeight.bold, fontSize: 13)),
+          if (icon != null) 
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+              child: Icon(icon, color: color, size: 20),
+            ),
+          const SizedBox(height: 16),
+          Text(title, style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600, fontSize: 13)),
           const SizedBox(height: 6),
           FittedBox(
             fit: BoxFit.scaleDown,
-            child: Text(value, style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 24)),
+            child: Text(value, style: const TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.w900, fontSize: 26, letterSpacing: -1)),
           ),
         ],
       ),
     );
   }
 
-  String _getMonthName(int month) {
-    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    return months[month - 1];
+  String _getMonthName(int month, {bool full = false}) {
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const shortMonths = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return full ? months[month - 1] : shortMonths[month - 1];
   }
 
   double _calculateInterval(List<FlSpot> spots) {

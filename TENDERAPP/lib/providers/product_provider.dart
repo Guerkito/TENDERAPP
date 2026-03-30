@@ -9,17 +9,24 @@ class ProductProvider with ChangeNotifier {
   List<Product> _products = [];
   List<Product> _expiringProducts = [];
   List<Product> _lowStockProducts = [];
+  List<String> _categories = [];
 
   List<Product> get products => _products;
   List<Product> get expiringProducts => _expiringProducts;
   List<Product> get lowStockProducts => _lowStockProducts;
+  List<String> get categories => _categories;
 
   Future<void> loadProducts() async {
     final db = await DBHelper().database;
-    
+
     // 1. Obtener todos los productos
     final List<Map<String, dynamic>> productMaps = await db.query('products');
-    
+
+    // 2. Obtener todas las categorías únicas presentes en los productos
+    final List<Map<String, dynamic>> catResult = await db.rawQuery('SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != ""');
+    _categories = catResult.map((e) => e['category'] as String).toList();
+    if (!_categories.contains('General')) _categories.insert(0, 'General');
+
     // 2. Obtener todos los lotes
     final List<Map<String, dynamic>> batchMaps = await db.query('product_batches');
     
@@ -146,14 +153,68 @@ class ProductProvider with ChangeNotifier {
   Future<void> updateProduct(Product product) async {
     try {
       final db = await DBHelper().database;
-      await db.update(
-        'products',
-        product.toMap(),
-        where: 'id = ?',
-        whereArgs: [product.id],
-      );
-      // Nota: La actualización de lotes individuales se manejará por separado
-      // o a través del módulo de compras.
+      
+      await db.transaction((txn) async {
+        // 1. Obtener el stock actual (suma de lotes)
+        final List<Map<String, dynamic>> batchResult = await txn.query(
+          'product_batches',
+          where: 'product_id = ?',
+          whereArgs: [product.id],
+        );
+        double currentStock = batchResult.fold(0.0, (sum, b) => sum + (b['stock'] as num).toDouble());
+        double newStock = product.stock.toDouble();
+
+        // 2. Si el stock cambió, ajustar lotes
+        if (newStock != currentStock) {
+          if (newStock > currentStock) {
+            // Aumento de stock: Crear un nuevo lote con la diferencia
+            final diff = newStock - currentStock;
+            await txn.insert('product_batches', {
+              'product_id': product.id,
+              'expiration_date': product.expirationDate,
+              'stock': diff,
+            });
+          } else {
+            // Disminución de stock: Ajustar lotes existentes (empezando por el más viejo/próximo a vencer)
+            double toRemove = currentStock - newStock;
+            final List<Map<String, dynamic>> sortedBatches = await txn.query(
+              'product_batches',
+              where: 'product_id = ? AND stock > 0',
+              whereArgs: [product.id],
+              orderBy: 'expiration_date ASC',
+            );
+
+            for (var bMap in sortedBatches) {
+              if (toRemove <= 0) break;
+              double bStock = (bMap['stock'] as num).toDouble();
+              int bId = bMap['id'];
+
+              if (bStock <= toRemove) {
+                await txn.delete('product_batches', where: 'id = ?', whereArgs: [bId]);
+                toRemove -= bStock;
+              } else {
+                await txn.update('product_batches', {'stock': bStock - toRemove}, where: 'id = ?', whereArgs: [bId]);
+                toRemove = 0;
+              }
+            }
+          }
+        }
+
+        // 3. Actualizar la información básica del producto
+        await txn.update(
+          'products',
+          product.toMap(),
+          where: 'id = ?',
+          whereArgs: [product.id],
+        );
+
+        // 4. Asegurar que el stock denormalizado en 'products' sea correcto
+        await txn.rawUpdate(
+          'UPDATE products SET stock = (SELECT COALESCE(SUM(stock), 0) FROM product_batches WHERE product_id = ?) WHERE id = ?',
+          [product.id, product.id]
+        );
+      });
+
       await loadProducts();
     } catch (e) {
       print('ProductProvider: Error updating product: $e');

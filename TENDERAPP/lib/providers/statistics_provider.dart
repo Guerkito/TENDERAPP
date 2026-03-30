@@ -34,70 +34,83 @@ class StatisticsProvider with ChangeNotifier {
     final db = await DBHelper().database;
 
     // --- Build WHERE Clauses ---
-    
-    // 1. General Filter (for Total Sales, Top Products, etc.)
     String filterWhereClause = '';
     List<String> filterWhereArgs = [];
-
-    if (year != null) {
-      filterWhereClause += ' WHERE SUBSTR(sale_date, 1, 4) = ?';
-      filterWhereArgs.add(year.toString());
-    }
-    if (month != null) {
-      String connector = filterWhereClause.isEmpty ? ' WHERE' : ' AND';
-      filterWhereClause += '$connector SUBSTR(sale_date, 6, 2) = ?';
-      filterWhereArgs.add(month.toString().padLeft(2, '0'));
-    }
-    if (day != null) {
-      String connector = filterWhereClause.isEmpty ? ' WHERE' : ' AND';
-      filterWhereClause += '$connector SUBSTR(sale_date, 9, 2) = ?';
-      filterWhereArgs.add(day.toString().padLeft(2, '0'));
-    }
-
-    // Filter for expenses
     String expensesWhereClause = '';
     List<String> expensesWhereArgs = [];
-    if (year != null) {
-      expensesWhereClause += ' WHERE SUBSTR(date, 1, 4) = ?';
-      expensesWhereArgs.add(year.toString());
-    }
-    if (month != null) {
-      String connector = expensesWhereClause.isEmpty ? ' WHERE' : ' AND';
-      expensesWhereClause += '$connector SUBSTR(date, 6, 2) = ?';
-      expensesWhereArgs.add(month.toString().padLeft(2, '0'));
-    }
-    if (day != null) {
-      String connector = expensesWhereClause.isEmpty ? ' WHERE' : ' AND';
-      expensesWhereClause += '$connector SUBSTR(date, 9, 2) = ?';
-      expensesWhereArgs.add(day.toString().padLeft(2, '0'));
-    }
-
-    // Filter for customer movements
     String movementsWhereClause = '';
-    if (year != null) {
-      movementsWhereClause += ' WHERE SUBSTR(date_time, 1, 4) = ?';
-    }
-    if (month != null) {
-      String connector = movementsWhereClause.isEmpty ? ' WHERE' : ' AND';
-      movementsWhereClause += '$connector SUBSTR(date_time, 6, 2) = ?';
-    }
-    if (day != null) {
-      String connector = movementsWhereClause.isEmpty ? ' WHERE' : ' AND';
-      movementsWhereClause += '$connector SUBSTR(date_time, 9, 2) = ?';
-    }
-    
-    // Alias for joined queries
     String productsWhereClause = '';
-    if (year != null) {
-      productsWhereClause += ' WHERE SUBSTR(s.sale_date, 1, 4) = ?';
-    }
-    if (month != null) {
-      String connector = productsWhereClause.isEmpty ? ' WHERE' : ' AND';
-      productsWhereClause += '$connector SUBSTR(s.sale_date, 6, 2) = ?';
-    }
-    if (day != null) {
-      String connector = productsWhereClause.isEmpty ? ' WHERE' : ' AND';
-      productsWhereClause += '$connector SUBSTR(s.sale_date, 9, 2) = ?';
+
+    if (year != null && month != null && day != null) {
+      // Si tenemos la fecha completa, usamos una comparación directa de fecha
+      final dateStr = '${year.toString()}-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}';
+      filterWhereClause = ' WHERE DATE(sale_date) = DATE(?)';
+      filterWhereArgs = [dateStr];
+      
+      expensesWhereClause = ' WHERE DATE(date) = DATE(?)';
+      expensesWhereArgs = [dateStr];
+      
+      movementsWhereClause = ' WHERE DATE(date_time) = DATE(?)';
+      
+      productsWhereClause = ' WHERE DATE(s.sale_date) = DATE(?)';
+    } else {
+      // 1. General Filter (for Total Sales, Top Products, etc.)
+      if (year != null) {
+        filterWhereClause += ' WHERE SUBSTR(sale_date, 1, 4) = ?';
+        filterWhereArgs.add(year.toString());
+      }
+      if (month != null) {
+        String connector = filterWhereClause.isEmpty ? ' WHERE' : ' AND';
+        filterWhereClause += '$connector SUBSTR(sale_date, 6, 2) = ?';
+        filterWhereArgs.add(month.toString().padLeft(2, '0'));
+      }
+      if (day != null) {
+        String connector = filterWhereClause.isEmpty ? ' WHERE' : ' AND';
+        filterWhereClause += '$connector SUBSTR(sale_date, 9, 2) = ?';
+        filterWhereArgs.add(day.toString().padLeft(2, '0'));
+      }
+
+      // Filter for expenses
+      if (year != null) {
+        expensesWhereClause += ' WHERE SUBSTR(date, 1, 4) = ?';
+        expensesWhereArgs.add(year.toString());
+      }
+      if (month != null) {
+        String connector = expensesWhereClause.isEmpty ? ' WHERE' : ' AND';
+        expensesWhereClause += '$connector SUBSTR(date, 6, 2) = ?';
+        expensesWhereArgs.add(month.toString().padLeft(2, '0'));
+      }
+      if (day != null) {
+        String connector = expensesWhereClause.isEmpty ? ' WHERE' : ' AND';
+        expensesWhereClause += '$connector SUBSTR(date, 9, 2) = ?';
+        expensesWhereArgs.add(day.toString().padLeft(2, '0'));
+      }
+
+      // Filter for customer movements
+      if (year != null) {
+        movementsWhereClause += ' WHERE SUBSTR(date_time, 1, 4) = ?';
+      }
+      if (month != null) {
+        String connector = movementsWhereClause.isEmpty ? ' WHERE' : ' AND';
+        movementsWhereClause += '$connector SUBSTR(date_time, 6, 2) = ?';
+      }
+      if (day != null) {
+        String connector = movementsWhereClause.isEmpty ? ' WHERE' : ' AND';
+        movementsWhereClause += '$connector SUBSTR(date_time, 9, 2) = ?';
+      }
+      
+      // Alias for joined queries
+      if (year != null) {
+        productsWhereClause += ' WHERE SUBSTR(s.sale_date, 1, 4) = ?';
+      }
+      if (month != null) {
+        String connector = productsWhereClause.isEmpty ? ' WHERE' : ' AND';
+        productsWhereClause += '$connector SUBSTR(s.sale_date, 6, 2) = ?';
+      }
+      if (day != null) {
+        String connector = productsWhereClause.isEmpty ? ' WHERE' : ' AND';
+        productsWhereClause += '$connector SUBSTR(s.sale_date, 9, 2) = ?';
+      }
     }
 
     // 2. Monthly Chart Filter (Always for the selected month/year, ignores day filter for the chart context)

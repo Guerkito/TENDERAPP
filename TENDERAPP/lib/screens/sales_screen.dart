@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../models/product_model.dart';
 import '../providers/product_provider.dart';
 import '../providers/sale_provider.dart';
@@ -11,6 +12,7 @@ import '../models/customer_model.dart';
 import '../models/sale_model.dart';
 import '../api/currency_formatter.dart';
 import '../api/pdf_generator.dart';
+import '../providers/statistics_provider.dart';
 import '../widgets/info_banner.dart';
 
 class SalesScreen extends StatefulWidget {
@@ -23,11 +25,36 @@ class SalesScreen extends StatefulWidget {
 class _SalesScreenState extends State<SalesScreen> {
   final Map<Product, num> _cart = {}; 
   bool _showTutorial = true;
+  Customer? _selectedCustomer;
+  final TextEditingController _searchController = TextEditingController();
+  List<Product> _searchSuggestions = [];
 
   void _addProductToCart(Product product, {num quantity = 1}) {
     setState(() {
       _cart.update(product, (value) => value + quantity, ifAbsent: () => quantity);
+      _searchController.clear();
+      _searchSuggestions = [];
     });
+  }
+
+  void _onSearchChanged(String query) {
+    if (query.isEmpty) {
+      setState(() => _searchSuggestions = []);
+      return;
+    }
+    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    setState(() {
+      _searchSuggestions = productProvider.products
+          .where((p) => p.name.toLowerCase().contains(query.toLowerCase()) || (p.barcode ?? "").contains(query))
+          .take(5)
+          .toList();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _removeProductFromCart(Product product) {
@@ -48,69 +75,82 @@ class _SalesScreenState extends State<SalesScreen> {
     final allProducts = productProvider.products;
     List<Product> filteredProducts = allProducts;
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (BuildContext context) {
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Seleccionar Producto'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'Buscar producto',
-                        prefixIcon: Icon(Icons.search),
-                      ),
-                      onChanged: (value) {
-                        setDialogState(() {
-                          filteredProducts = allProducts
-                              .where((p) => p.name.toLowerCase().contains(value.toLowerCase()))
-                              .toList();
-                        });
-                      },
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text('Buscar Producto', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 15),
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Nombre o código de barras',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                      filled: true,
+                      fillColor: Colors.grey[100],
                     ),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: filteredProducts.length,
-                        itemBuilder: (context, index) {
-                          final product = filteredProducts[index];
-                          return ListTile(
-                            title: Text(product.name),
-                            subtitle: Text('Precio: ${CurrencyFormatter.format(product.salePrice)} | Stock: ${product.stock}'),
-                            onTap: () async {
-                              Navigator.of(context).pop();
-                              if (product.stock > 0) {
-                                if (product.productType == 'fruver') {
-                                  final quantity = await _showQuantityDialog(product);
-                                  if (quantity != null && quantity > 0) {
-                                    _addProductToCart(product, quantity: quantity);
-                                  }
-                                } else {
-                                  _addProductToCart(product);
+                    onChanged: (value) {
+                      setDialogState(() {
+                        filteredProducts = allProducts
+                            .where((p) => p.name.toLowerCase().contains(value.toLowerCase()) || (p.barcode ?? "").contains(value))
+                            .toList();
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 15),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: filteredProducts.length,
+                      itemBuilder: (context, index) {
+                        final product = filteredProducts[index];
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                          leading: CircleAvatar(
+                            backgroundColor: const Color(0xFF00DF82).withOpacity(0.1),
+                            child: const Icon(Icons.inventory_2, color: Color(0xFF1A3C2B)),
+                          ),
+                          title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('Stock: ${product.stock} | ${CurrencyFormatter.format(product.salePrice)}'),
+                          trailing: const Icon(Icons.add_circle, color: Color(0xFF00DF82)),
+                          onTap: () async {
+                            if (product.stock > 0) {
+                              if (product.productType == 'fruver') {
+                                final quantity = await _showQuantityDialog(product);
+                                if (quantity != null && quantity > 0) {
+                                  _addProductToCart(product, quantity: quantity);
                                 }
                               } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Producto agotado!')),
-                                );
+                                _addProductToCart(product);
                               }
-                            },
-                          );
-                        },
-                      ),
+                              Navigator.pop(context);
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Producto agotado!')));
+                            }
+                          },
+                        );
+                      },
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cerrar'),
-                )
-              ],
             );
           },
         );
@@ -180,18 +220,26 @@ class _SalesScreenState extends State<SalesScreen> {
       return;
     }
 
-    final String? paymentMethod = await showDialog<String>(
+    final String? paymentMethod = await showModalBottomSheet<String>(
       context: context,
+      backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Método de Pago'),
-          content: Column(
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
+              const Text('¿Cómo desea pagar?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
               _buildPaymentOption(context, 'Efectivo', Icons.payments, Colors.green),
               _buildPaymentOption(context, 'Tarjeta', Icons.credit_card, Colors.blue),
               _buildPaymentOption(context, 'Nequi / Daviplata', Icons.phone_android, Colors.purple),
               _buildPaymentOption(context, 'Fiar (Crédito)', Icons.book, Colors.red),
+              const SizedBox(height: 10),
             ],
           ),
         );
@@ -204,19 +252,25 @@ class _SalesScreenState extends State<SalesScreen> {
         if (!success) return;
       }
 
-      int? selectedCustomerId;
       if (paymentMethod == 'Fiar (Crédito)') {
-        selectedCustomerId = await _showCustomerSelectionDialog();
-        if (selectedCustomerId == null) return;
+        final Customer? customer = await _showCustomerSelectionBottomSheet();
+        if (customer == null) return;
+        setState(() {
+          _selectedCustomer = customer;
+        });
       }
 
-      await _processSale(paymentMethod == 'Fiar (Crédito)' ? 'Fiado' : paymentMethod, selectedCustomerId);
+      await _processSale(paymentMethod == 'Fiar (Crédito)' ? 'Fiado' : paymentMethod, _selectedCustomer?.id);
     }
   }
 
   Widget _buildPaymentOption(BuildContext context, String title, IconData icon, Color color) {
     return ListTile(
-      leading: Icon(icon, color: color),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+        child: Icon(icon, color: color),
+      ),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
       onTap: () => Navigator.of(context).pop(title),
     );
@@ -319,7 +373,15 @@ class _SalesScreenState extends State<SalesScreen> {
         customerId: customerId,
       );
 
-      setState(() => _cart.clear());
+      // Reload statistics to ensure they are up to date
+      if (mounted) {
+        Provider.of<StatisticsProvider>(context, listen: false).loadStatistics();
+      }
+
+      setState(() {
+        _cart.clear();
+        _selectedCustomer = null;
+      });
 
       if (mounted) {
         _showSuccessDialog(saleId, finalTotal, paymentMethod, receiptItems, customerId);
@@ -333,7 +395,7 @@ class _SalesScreenState extends State<SalesScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Icon(Icons.check_circle, color: Colors.green, size: 60),
+        title: const Icon(Icons.check_circle, color: Color(0xFF00DF82), size: 60),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -352,7 +414,7 @@ class _SalesScreenState extends State<SalesScreen> {
               PdfGenerator.generateReceipt(
                 sale, 
                 items, 
-                null, 
+                _selectedCustomer?.name, 
                 storeName: Provider.of<SettingsProvider>(context, listen: false).storeName
               );
             },
@@ -364,46 +426,72 @@ class _SalesScreenState extends State<SalesScreen> {
     );
   }
 
-  Future<int?> _showCustomerSelectionDialog() async {
+  Future<Customer?> _showCustomerSelectionBottomSheet() async {
     final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
     await customerProvider.loadCustomers();
     final allCustomers = customerProvider.customers;
     List<Customer> filteredCustomers = allCustomers;
 
-    return await showDialog<int>(
+    return await showModalBottomSheet<Customer>(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Seleccionar Cliente'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      decoration: const InputDecoration(labelText: 'Buscar cliente', prefixIcon: Icon(Icons.search)),
-                      onChanged: (v) => setDialogState(() => filteredCustomers = allCustomers.where((c) => c.name.toLowerCase().contains(v.toLowerCase())).toList()),
-                    ),
-                    const SizedBox(height: 10),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: filteredCustomers.length,
-                        itemBuilder: (context, i) {
-                          final c = filteredCustomers[i];
-                          return ListTile(
-                            title: Text(c.name),
-                            subtitle: Text('Deuda: ${CurrencyFormatter.format(c.totalPendingBalance)}'),
-                            onTap: () => Navigator.of(context).pop(c.id),
-                          );
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.7,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Asignar Cliente', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      TextButton.icon(
+                        icon: const Icon(Icons.person_add),
+                        label: const Text('Nuevo'),
+                        onPressed: () async {
+                          final newCustomer = await _showAddCustomerDialog();
+                          if (newCustomer != null && mounted) {
+                            Navigator.pop(context, newCustomer);
+                          }
                         },
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 15),
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Buscar cliente por nombre',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                      filled: true,
+                      fillColor: Colors.grey[100],
                     ),
-                  ],
-                ),
+                    onChanged: (v) => setDialogState(() => filteredCustomers = allCustomers.where((c) => c.name.toLowerCase().contains(v.toLowerCase())).toList()),
+                  ),
+                  const SizedBox(height: 15),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: filteredCustomers.length,
+                      itemBuilder: (context, i) {
+                        final c = filteredCustomers[i];
+                        return ListTile(
+                          title: Text(c.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('Deuda: ${CurrencyFormatter.format(c.totalPendingBalance)}'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => Navigator.of(context).pop(c),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
-              actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar'))],
             );
           },
         );
@@ -411,113 +499,242 @@ class _SalesScreenState extends State<SalesScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Caja / Ventas'),
+  Future<Customer?> _showAddCustomerDialog() async {
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+
+    return await showDialog<Customer>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Nuevo Cliente'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Nombre Completo'), autofocus: true),
+            TextField(controller: phoneController, decoration: const InputDecoration(labelText: 'Teléfono (Opcional)'), keyboardType: TextInputType.phone),
+          ],
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.qr_code_scanner),
-            onPressed: _scanBarcodeAndAddToCart,
-            tooltip: 'Escanear Código',
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCELAR')),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameController.text.isNotEmpty) {
+                final customer = Customer(name: nameController.text, phone: phoneController.text);
+                final id = await Provider.of<CustomerProvider>(context, listen: false).addCustomer(customer);
+                final savedCustomer = Customer(id: id, name: customer.name, phone: customer.phone);
+                Navigator.pop(context, savedCustomer);
+              }
+            },
+            child: const Text('GUARDAR'),
           ),
         ],
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        title: const Text('Caja / POS', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: Icon(PhosphorIcons.qrCode(PhosphorIconsStyle.regular), size: 28),
+            onPressed: _scanBarcodeAndAddToCart,
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-          child: Column(
-            children: [
-              // Banner Guía con botón de cerrar
-              if (_showTutorial)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16, bottom: 8),
-                  child: InfoBanner(
-                    text: 'Agrega productos al carrito usando el buscador o el escáner. Al cobrar, el stock se descuenta automáticamente.',
-                    icon: Icons.shopping_cart_checkout,
-                    color: Colors.green,
-                    onClose: () => setState(() => _showTutorial = false),
-                  ),
-                ),
-              Expanded(
-                child: _cart.isEmpty
-                    ? Center(child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.shopping_cart_outlined, size: 64, color: Colors.grey[300]),
-                          const SizedBox(height: 16),
-                          const Text('Carrito vacío', style: TextStyle(color: Colors.grey)),
-                        ],
-                      ))
-                    : ListView.builder(
-                        itemCount: _cart.length,
-                        itemBuilder: (context, index) {
-                          final product = _cart.keys.elementAt(index);
-                          final qty = _cart[product]!;
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: ListTile(
-                              title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text('$qty ${product.unit ?? ""} x ${CurrencyFormatter.format(product.salePrice)}'),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(icon: const Icon(Icons.remove_circle_outline), onPressed: () => _removeProductFromCart(product)),
-                                  Text('$qty', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                  IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: () => _addProductToCart(product)),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
+        child: Column(
+          children: [
+            if (_selectedCustomer != null)
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Column(
+                color: const Color(0xFF00DF82).withOpacity(0.1),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                child: Row(
                   children: [
-                    const Text('TOTAL A COBRAR', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12)),
-                    Text(
-                      CurrencyFormatter.format(_totalAmount),
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 40, color: Colors.black),
-                    ),
-                    const SizedBox(height: 15),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 60,
-                      child: ElevatedButton(
-                        onPressed: _checkout,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                        ),
-                        child: const Text('COBRAR AHORA', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      ),
+                    const Icon(Icons.person, color: Color(0xFF1A3C2B), size: 18),
+                    const SizedBox(width: 8),
+                    Text('Cliente: ${_selectedCustomer!.name}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1A3C2B))),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: () => setState(() => _selectedCustomer = null),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
+            // BARRA DE BÚSQUEDA RÁPIDA
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 15, 20, 10),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Buscar o escanear producto...',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchController.text.isNotEmpty 
+                        ? IconButton(icon: const Icon(Icons.clear), onPressed: () {
+                            _searchController.clear();
+                            _onSearchChanged('');
+                          })
+                        : IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: _showProductSelectionDialog),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                  ),
+                  if (_searchSuggestions.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15),
+                        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
+                      ),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _searchSuggestions.length,
+                        itemBuilder: (context, index) {
+                          final p = _searchSuggestions[index];
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: const Color(0xFF00DF82).withOpacity(0.1),
+                              child: const Icon(Icons.inventory_2, color: Color(0xFF1A3C2B), size: 16),
+                            ),
+                            title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            subtitle: Text('Stock: ${p.stock} | ${CurrencyFormatter.format(p.salePrice)}', style: const TextStyle(fontSize: 12)),
+                            trailing: const Icon(Icons.add_circle, color: Color(0xFF00DF82)),
+                            onTap: () {
+                              if (p.stock > 0) {
+                                if (p.productType == 'fruver') {
+                                  _showQuantityDialog(p).then((qty) {
+                                    if (qty != null && qty > 0) _addProductToCart(p, quantity: qty);
+                                  });
+                                } else {
+                                  _addProductToCart(p);
+                                }
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sin stock')));
+                              }
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: _cart.isEmpty
+                  ? Center(child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(PhosphorIcons.shoppingCart(PhosphorIconsStyle.thin), size: 100, color: Colors.grey[300]),
+                        const SizedBox(height: 20),
+                        const Text('Tu carrito está vacío', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          onPressed: _showProductSelectionDialog,
+                          child: const Text('AGREGAR PRODUCTOS'),
+                        ),
+                      ],
+                    ))
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(20),
+                      itemCount: _cart.length,
+                      itemBuilder: (context, index) {
+                        final product = _cart.keys.elementAt(index);
+                        final qty = _cart[product]!;
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                    Text('${CurrencyFormatter.format(product.salePrice)} c/u', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                                  ],
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.remove_circle, color: Color(0xFF8A8A8A)),
+                                    onPressed: () => _removeProductFromCart(product),
+                                  ),
+                                  Text('$qty', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                                  IconButton(
+                                    icon: const Icon(Icons.add_circle, color: Color(0xFF00DF82)),
+                                    onPressed: () => _addProductToCart(product),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, -5))],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('TOTAL', style: TextStyle(color: Color(0xFF8A8A8A), fontWeight: FontWeight.bold, fontSize: 14)),
+                      Text(
+                        CurrencyFormatter.format(_totalAmount),
+                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 32, color: Color(0xFF1A1A1A)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _checkout,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00DF82),
+                        foregroundColor: const Color(0xFF1A3C2B),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
+                      ),
+                      child: const Text('COBRAR AHORA', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            onPressed: _scanBarcodeAndAddToCart,
-            heroTag: 'scan_fab',
-            child: const Icon(Icons.qr_code_scanner),
-          ),
-          const SizedBox(height: 10),
-          FloatingActionButton.extended(
-            onPressed: _showProductSelectionDialog,
-            heroTag: 'search_fab',
-            label: const Text('Buscar'),
-            icon: const Icon(Icons.search),
-          ),
-        ],
+      floatingActionButton: _cart.isEmpty ? null : FloatingActionButton(
+        heroTag: 'sales_fab',
+        onPressed: _showProductSelectionDialog,
+        backgroundColor: const Color(0xFF1A3C2B),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/expense_model.dart';
 import '../providers/expense_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/statistics_provider.dart';
 import 'package:intl/intl.dart';
 import '../api/currency_formatter.dart';
 import '../api/report_generator.dart';
@@ -67,7 +68,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final description = descriptionController.text;
               final amount = CurrencyFormatter.parse(amountController.text);
 
@@ -78,7 +79,16 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   date: DateTime.now(),
                   category: selectedCategory,
                 );
-                Provider.of<ExpenseProvider>(context, listen: false).addExpense(newExpense);
+                await Provider.of<ExpenseProvider>(context, listen: false).addExpense(newExpense);
+                
+                // Actualizar estadísticas del Dashboard de inmediato
+                if (mounted) {
+                  final now = DateTime.now();
+                  Provider.of<StatisticsProvider>(context, listen: false).loadStatistics(
+                    year: now.year, month: now.month, day: now.day
+                  );
+                }
+                
                 Navigator.of(ctx).pop();
               }
             },
@@ -187,8 +197,15 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                       actions: [
                                         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
                                         TextButton(
-                                          onPressed: () {
-                                            expenseProvider.deleteExpense(expense.id!);
+                                          onPressed: () async {
+                                            await expenseProvider.deleteExpense(expense.id!);
+                                            // Actualizar estadísticas tras borrar
+                                            if (mounted) {
+                                              final now = DateTime.now();
+                                              Provider.of<StatisticsProvider>(context, listen: false).loadStatistics(
+                                                year: now.year, month: now.month, day: now.day
+                                              );
+                                            }
                                             Navigator.pop(ctx);
                                           },
                                           child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
@@ -208,6 +225,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'expenses_fab',
         onPressed: _showAddExpenseDialog,
         child: const Icon(Icons.add),
       ),

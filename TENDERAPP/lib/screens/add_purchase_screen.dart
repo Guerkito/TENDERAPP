@@ -97,7 +97,8 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
 
   void _showAddProductDialog(Product product) async {
     final qtyController = TextEditingController(text: "1");
-    final costController = TextEditingController(text: product.purchasePrice.toString());
+    final formatter = NumberFormat.decimalPattern('es_CO');
+    final costController = TextEditingController(text: formatter.format(product.purchasePrice));
     final expiryController = TextEditingController();
     DateTime? selectedExpiry;
 
@@ -120,7 +121,8 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                 TextField(
                   controller: costController,
                   decoration: const InputDecoration(labelText: 'Nuevo Costo Unitario', prefixText: '\$ '),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [ThousandSeparatorInputFormatter()],
                 ),
                 const SizedBox(height: 10),
                 TextField(
@@ -154,8 +156,8 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
               ElevatedButton(
                 onPressed: () {
                   final q = double.tryParse(qtyController.text);
-                  final c = double.tryParse(costController.text);
-                  if (q != null && c != null && q > 0) {
+                  final c = CurrencyFormatter.parse(costController.text);
+                  if (q != null && c > 0 && q > 0) {
                     setState(() {
                       _purchaseItems.add({
                         'product': product, 

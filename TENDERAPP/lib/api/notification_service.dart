@@ -22,9 +22,13 @@ class NotificationService {
       requestSoundPermission: true,
     );
 
+    const LinuxInitializationSettings initializationSettingsLinux =
+        LinuxInitializationSettings(defaultActionName: 'Open');
+
     const InitializationSettings initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
+      linux: initializationSettingsLinux,
     );
 
     await _notificationsPlugin.initialize(
@@ -36,48 +40,58 @@ class NotificationService {
   }
 
   Future<void> showLowStockAlert(String productName, double currentStock) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-      'stock_alerts_channel',
-      'Alertas de Stock',
-      channelDescription: 'Notificaciones para productos con stock bajo',
-      importance: Importance.high,
-      priority: Priority.high,
-      color: Color(0xFFFF0000),
-    );
+    try {
+      const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
+        'stock_alerts_channel',
+        'Alertas de Stock',
+        channelDescription: 'Notificaciones para productos con stock bajo',
+        importance: Importance.high,
+        priority: Priority.high,
+        color: Color(0xFFFF0000),
+      );
 
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(
-      android: androidPlatformChannelSpecifics,
-      iOS: DarwinNotificationDetails(),
-    );
+      const NotificationDetails platformChannelSpecifics = NotificationDetails(
+        android: androidPlatformChannelSpecifics,
+        iOS: DarwinNotificationDetails(),
+        linux: LinuxNotificationDetails(),
+      );
 
-    await _notificationsPlugin.show(
-      0,
-      '¡Stock Bajo!',
-      'El producto $productName se está agotando (Quedan: $currentStock)',
-      platformChannelSpecifics,
-    );
+      await _notificationsPlugin.show(
+        0,
+        '¡Stock Bajo!',
+        'El producto $productName se está agotando (Quedan: $currentStock)',
+        platformChannelSpecifics,
+      );
+    } catch (e) {
+      print('NotificationService: Failed to show low stock alert: $e');
+    }
   }
 
   Future<void> showExpiryAlert(String productName, String expiryDate) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-      'expiry_alerts_channel',
-      'Alertas de Vencimiento',
-      channelDescription: 'Notificaciones para productos próximos a vencer',
-      importance: Importance.high,
-      priority: Priority.high,
-      color: Color(0xFFFF9800),
-    );
+    try {
+      const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
+        'expiry_alerts_channel',
+        'Alertas de Vencimiento',
+        channelDescription: 'Notificaciones para productos próximos a vencer',
+        importance: Importance.high,
+        priority: Priority.high,
+        color: Color(0xFFFF9800),
+      );
 
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(
-      android: androidPlatformChannelSpecifics,
-      iOS: DarwinNotificationDetails(),
-    );
+      const NotificationDetails platformChannelSpecifics = NotificationDetails(
+        android: androidPlatformChannelSpecifics,
+        iOS: DarwinNotificationDetails(),
+        linux: LinuxNotificationDetails(),
+      );
 
-    await _notificationsPlugin.show(
-      1,
-      '¡Producto por Vencer!',
-      'El producto $productName vence pronto: $expiryDate',
-      platformChannelSpecifics,
-    );
+      await _notificationsPlugin.show(
+        1,
+        '¡Producto por Vencer!',
+        'El producto $productName vence pronto: $expiryDate',
+        platformChannelSpecifics,
+      );
+    } catch (e) {
+      print('NotificationService: Failed to show expiry alert: $e');
+    }
   }
 }

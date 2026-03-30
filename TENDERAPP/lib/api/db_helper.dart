@@ -23,7 +23,7 @@ class DBHelper {
   }
 
   Future<Database> _initDB() async {
-    print('DBHelper: Initializing database...');
+    print('DBHelper: [DEBUG] Initializing database...');
     try {
       String path;
       if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
@@ -35,15 +35,18 @@ class DBHelper {
         path = join(await getDatabasesPath(), 'tender_app.db');
       }
       
-      print('DBHelper: Database path: $path');
+      print('DBHelper: [DEBUG] Database path: $path');
       return await openDatabase(
         path,
-        version: 10,
+        version: 12,
         onCreate: _onCreate,
-        onUpgrade: _onUpgrade,
+        onUpgrade: (db, oldV, newV) async {
+          print('DBHelper: [DEBUG] MIGRATION DETECTED: $oldV -> $newV');
+          await _onUpgrade(db, oldV, newV);
+        },
       );
     } catch (e) {
-      print('DBHelper: FATAL Error initializing database: $e');
+      print('DBHelper: [DEBUG] FATAL Error initializing database: $e');
       rethrow;
     }
   }
@@ -61,10 +64,30 @@ class DBHelper {
         stock INTEGER NOT NULL DEFAULT 0,
         expiration_date TEXT,
         product_type TEXT NOT NULL DEFAULT 'product',
-        unit TEXT
+        unit TEXT,
+        category TEXT
       )
     ''');
     print('DBHelper: Products table created.');
+
+    await db.execute('''
+      CREATE TABLE categories(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE
+      )
+    ''');
+    print('DBHelper: Categories table created.');
+
+    await db.execute('''
+      CREATE TABLE supplier_appointments(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        supplier_id INTEGER NOT NULL,
+        appointment_date TEXT NOT NULL,
+        notes TEXT,
+        FOREIGN KEY (supplier_id) REFERENCES suppliers (id) ON DELETE CASCADE
+      )
+    ''');
+    print('DBHelper: Supplier appointments table created.');
 
     await db.execute('''
       CREATE TABLE sales(
@@ -313,6 +336,45 @@ class DBHelper {
         )
       ''');
       print('DBHelper: Upgraded to version 10 (Settings table created).');
+    }
+    if (oldVersion < 11) {
+      try {
+        await db.execute('ALTER TABLE products ADD COLUMN category TEXT');
+      } catch (e) {
+        print('DBHelper: Column category might already exist: $e');
+      }
+      
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS categories(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE
+        )
+      ''');
+      
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS supplier_appointments(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          supplier_id INTEGER NOT NULL,
+          appointment_date TEXT NOT NULL,
+          notes TEXT,
+          FOREIGN KEY (supplier_id) REFERENCES suppliers (id) ON DELETE CASCADE
+        )
+      ''');
+      print('DBHelper: Upgraded to version 11 (Added category column and missing tables).');
+    }
+    if (oldVersion < 12) {
+      try {
+        var columns = await db.rawQuery('PRAGMA table_info(products)');
+        bool hasCategory = columns.any((column) => column['name'] == 'category');
+        if (!hasCategory) {
+          await db.execute('ALTER TABLE products ADD COLUMN category TEXT');
+          print('DBHelper: [DEBUG] Category column added in version 12.');
+        } else {
+          print('DBHelper: [DEBUG] Category column already exists, skipping.');
+        }
+      } catch (e) {
+        print('DBHelper: [DEBUG] Error checking/adding category column: $e');
+      }
     }
   }
 }

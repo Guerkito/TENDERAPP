@@ -21,10 +21,12 @@ class CurrencyFormatter {
     return formatter.format(value);
   }
 
-  /// Convierte un string con formato ("1.000") a un número puro (1000)
+  /// Convierte un string con formato ("1.200.000") a un número puro (1200000)
   static double parse(String formattedValue) {
     if (formattedValue.isEmpty) return 0;
-    // Remueve todo lo que no sea número
+    // Remueve todo lo que no sea número (mantiene el punto si fuera decimal, pero aquí es separador de miles)
+    // En es_CO el punto es miles y la coma es decimal.
+    // Si la app solo maneja enteros para dinero (común en COP), removemos todo excepto dígitos.
     String cleaned = formattedValue.replaceAll(RegExp(r'[^0-9]'), '');
     return double.tryParse(cleaned) ?? 0;
   }

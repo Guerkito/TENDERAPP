@@ -1,7 +1,11 @@
+import 'dart:io';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
+import 'package:excel/excel.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'currency_formatter.dart';
 import '../providers/statistics_provider.dart';
 import '../models/product_model.dart';
@@ -32,6 +36,53 @@ class ReportGenerator {
       onLayout: (PdfPageFormat format) async => pdf.save(),
       name: 'Reporte_Financiero_$period',
     );
+  }
+
+  static Future<void> generateExcelReport(StatisticsProvider stats, {int? year, int? month, int? day, String storeName = 'TenderApp'}) async {
+    final excel = Excel.createExcel();
+    final period = _getPeriodString(year, month, day);
+    
+    // Sheet 1: Resumen
+    Sheet sheet1 = excel['Resumen'];
+    sheet1.appendRow([TextCellValue(storeName)]);
+    sheet1.appendRow([TextCellValue('Reporte Financiero - $period')]);
+    sheet1.appendRow([]);
+    sheet1.appendRow([TextCellValue('Indicador'), TextCellValue('Valor')]);
+    sheet1.appendRow([TextCellValue('Ventas Totales'), DoubleCellValue(stats.totalSalesAmount)]);
+    sheet1.appendRow([TextCellValue('Gastos Operativos'), DoubleCellValue(stats.totalExpenses)]);
+    sheet1.appendRow([TextCellValue('Utilidad Bruta'), DoubleCellValue(stats.grossProfit)]);
+    sheet1.appendRow([TextCellValue('Utilidad Neta'), DoubleCellValue(stats.netProfit)]);
+
+    // Sheet 2: Ventas por Producto
+    Sheet sheet2 = excel['Productos Más Vendidos'];
+    sheet2.appendRow([TextCellValue('Producto'), TextCellValue('Cantidad'), TextCellValue('Ingresos')]);
+    for (var p in stats.topSellingProducts) {
+      sheet2.appendRow([
+        TextCellValue(p['name'] ?? ''), 
+        IntCellValue((p['totalQuantity'] as num).toInt()), 
+        DoubleCellValue((p['totalRevenue'] as num).toDouble())
+      ]);
+    }
+
+    // Sheet 3: Ventas Diarias
+    Sheet sheet3 = excel['Ventas Diarias'];
+    sheet3.appendRow([TextCellValue('Fecha'), TextCellValue('Total Vendido')]);
+    final sortedDates = stats.dailySales.keys.toList()..sort((a, b) => b.compareTo(a));
+    for (var date in sortedDates) {
+      sheet3.appendRow([TextCellValue(date), DoubleCellValue(stats.dailySales[date]!)]);
+    }
+
+    // Guardar y compartir
+    final directory = await getTemporaryDirectory();
+    final fileName = 'Reporte_TenderApp_${period.replaceAll('/', '-')}.xlsx';
+    final filePath = '${directory.path}/$fileName';
+    final fileBytes = excel.save();
+    
+    if (fileBytes != null) {
+      final file = File(filePath);
+      await file.writeAsBytes(fileBytes);
+      await Share.shareXFiles([XFile(filePath)], text: 'Reporte Financiero TenderApp');
+    }
   }
 
   static Future<void> generateInventoryReport(List<Product> products, {String storeName = 'TenderApp'}) async {
