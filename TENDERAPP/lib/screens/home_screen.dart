@@ -8,6 +8,7 @@ import 'sales_screen.dart';
 import 'inventory_screen.dart';
 import 'customers_screen.dart';
 import 'more_screen.dart';
+import 'pin_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,19 +17,44 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  bool _isUnlocked = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkStoreName();
+      _initialize();
     });
   }
 
-  Future<void> _checkStoreName() async {
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final settings =
+          Provider.of<SettingsProvider>(context, listen: false);
+      if (settings.hasPinEnabled) {
+        setState(() => _isUnlocked = false);
+      }
+    }
+  }
+
+  Future<void> _initialize() async {
     final settings = Provider.of<SettingsProvider>(context, listen: false);
     await settings.loadSettings();
+
+    if (!settings.hasPinEnabled) {
+      setState(() => _isUnlocked = true);
+    }
+    // Si tiene PIN, _isUnlocked permanece false → PinScreen se muestra
+
     if (!settings.isNameSet) {
       _showStoreNameDialog();
     }
@@ -40,19 +66,23 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('¡Bienvenido!', style: TextStyle(fontWeight: FontWeight.bold)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('¡Bienvenido!',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Personaliza tus recibos y reportes. ¿Cómo se llama tu tienda?'),
+            const Text(
+                'Personaliza tus recibos y reportes. ¿Cómo se llama tu tienda?'),
             const SizedBox(height: 20),
             TextField(
               controller: controller,
               autofocus: true,
               decoration: InputDecoration(
                 labelText: 'Nombre de tu tienda',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16)),
                 hintText: 'Ej: Tienda de Don Pepe',
               ),
             ),
@@ -67,7 +97,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.pop(context);
               }
             },
-            child: const Text('EMPEZAR', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00DF82))),
+            child: const Text('EMPEZAR',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF00DF82))),
           ),
         ],
       ),
@@ -84,6 +117,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = Provider.of<SettingsProvider>(context);
+
+    // Mostrar pantalla de carga mientras settings no está listo
+    if (!settings.isLoaded) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF1A3C2B),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF00DF82)),
+        ),
+      );
+    }
+
+    // Mostrar PIN si está activado y aún no desbloqueado
+    if (settings.hasPinEnabled && !_isUnlocked) {
+      return PinScreen(onSuccess: () => setState(() => _isUnlocked = true));
+    }
+
     final navProvider = Provider.of<NavigationProvider>(context);
 
     return Scaffold(
@@ -110,11 +160,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 backgroundColor: Colors.transparent,
                 indicatorColor: const Color(0xFF00DF82),
                 labelTextStyle: MaterialStateProperty.all(
-                  const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500),
+                  const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500),
                 ),
                 iconTheme: MaterialStateProperty.resolveWith((states) {
                   if (states.contains(MaterialState.selected)) {
-                    return const IconThemeData(color: Color(0xFF1A3C2B), size: 24);
+                    return const IconThemeData(
+                        color: Color(0xFF1A3C2B), size: 24);
                   }
                   return const IconThemeData(color: Colors.white70, size: 24);
                 }),
@@ -161,7 +215,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  NavigationDestination _buildDestination(IconData icon, IconData selectedIcon, String label) {
+  NavigationDestination _buildDestination(
+      IconData icon, IconData selectedIcon, String label) {
     return NavigationDestination(
       icon: Icon(icon),
       selectedIcon: Icon(selectedIcon),

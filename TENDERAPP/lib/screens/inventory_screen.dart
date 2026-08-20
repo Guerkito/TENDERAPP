@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/product_model.dart';
 import '../providers/product_provider.dart';
 import '../providers/settings_provider.dart';
 import '../api/currency_formatter.dart';
 import '../api/report_generator.dart';
-import '../widgets/info_banner.dart';
 import 'add_product_screen.dart';
 
 class InventoryScreen extends StatefulWidget {
@@ -18,7 +16,6 @@ class InventoryScreen extends StatefulWidget {
 class _InventoryScreenState extends State<InventoryScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  bool _showTutorial = true;
   String _selectedCategory = 'Todos';
 
   @override
@@ -169,10 +166,33 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             trailing: IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
                               onPressed: () async {
-                                await productProvider.deleteProduct(product.id!);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Producto eliminado')),
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Eliminar producto'),
+                                    content: Text(
+                                        '¿Eliminar "${product.name}"? Se borrará su historial de ventas permanentemente.'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx, false),
+                                        child: const Text('CANCELAR'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx, true),
+                                        style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                        child: const Text('ELIMINAR'),
+                                      ),
+                                    ],
+                                  ),
                                 );
+                                if (confirmed == true && context.mounted) {
+                                  await productProvider.deleteProduct(product.id!);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Producto eliminado')),
+                                    );
+                                  }
+                                }
                               },
                             ),
                             onTap: () {

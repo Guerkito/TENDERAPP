@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart'; // Import path_provider
+import 'package:path_provider/path_provider.dart';
 
 class DBHelper {
   static final DBHelper _instance = DBHelper._internal();
@@ -23,36 +23,32 @@ class DBHelper {
   }
 
   Future<Database> _initDB() async {
-    print('DBHelper: [DEBUG] Initializing database...');
     try {
       String path;
       if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
-        // Desktop platforms
         final documentsDirectory = await getApplicationDocumentsDirectory();
         path = join(documentsDirectory.path, 'tender_app.db');
       } else {
-        // Mobile platforms
         path = join(await getDatabasesPath(), 'tender_app.db');
       }
-      
-      print('DBHelper: [DEBUG] Database path: $path');
+
+      debugPrint('DBHelper: database path: $path');
       return await openDatabase(
         path,
-        version: 12,
+        version: 14,
         onCreate: _onCreate,
         onUpgrade: (db, oldV, newV) async {
-          print('DBHelper: [DEBUG] MIGRATION DETECTED: $oldV -> $newV');
+          debugPrint('DBHelper: migration $oldV -> $newV');
           await _onUpgrade(db, oldV, newV);
         },
       );
     } catch (e) {
-      print('DBHelper: [DEBUG] FATAL Error initializing database: $e');
+      debugPrint('DBHelper: FATAL error initializing database: $e');
       rethrow;
     }
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    print('DBHelper: Creating database tables for version $version...');
     await db.execute('''
       CREATE TABLE products(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,7 +64,6 @@ class DBHelper {
         category TEXT
       )
     ''');
-    print('DBHelper: Products table created.');
 
     await db.execute('''
       CREATE TABLE categories(
@@ -76,7 +71,6 @@ class DBHelper {
         name TEXT NOT NULL UNIQUE
       )
     ''');
-    print('DBHelper: Categories table created.');
 
     await db.execute('''
       CREATE TABLE supplier_appointments(
@@ -87,7 +81,6 @@ class DBHelper {
         FOREIGN KEY (supplier_id) REFERENCES suppliers (id) ON DELETE CASCADE
       )
     ''');
-    print('DBHelper: Supplier appointments table created.');
 
     await db.execute('''
       CREATE TABLE sales(
@@ -95,10 +88,20 @@ class DBHelper {
         total_amount REAL NOT NULL,
         payment_method TEXT NOT NULL,
         sale_date TEXT NOT NULL,
-        customer_id INTEGER
+        customer_id INTEGER,
+        status TEXT NOT NULL DEFAULT 'completed'
       )
     ''');
-    print('DBHelper: Sales table created.');
+
+    await db.execute('''
+      CREATE TABLE sale_payments(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sale_id INTEGER NOT NULL,
+        payment_method TEXT NOT NULL,
+        amount REAL NOT NULL,
+        FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE CASCADE
+      )
+    ''');
 
     await db.execute('''
       CREATE TABLE sale_items(
@@ -107,11 +110,11 @@ class DBHelper {
         product_id INTEGER NOT NULL,
         quantity INTEGER NOT NULL,
         price_at_sale REAL NOT NULL,
+        discount REAL NOT NULL DEFAULT 0,
         FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE CASCADE,
         FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
       )
     ''');
-    print('DBHelper: Sale items table created.');
 
     await db.execute('''
       CREATE TABLE suppliers(
@@ -124,7 +127,6 @@ class DBHelper {
         last_visit TEXT
       )
     ''');
-    print('DBHelper: Suppliers table created.');
 
     await db.execute('''
       CREATE TABLE customers(
@@ -136,7 +138,6 @@ class DBHelper {
         points INTEGER DEFAULT 0
       )
     ''');
-    print('DBHelper: Customers table created.');
 
     await db.execute('''
       CREATE TABLE customer_movements(
@@ -150,7 +151,6 @@ class DBHelper {
         FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE
       )
     ''');
-    print('DBHelper: Customer movements table created.');
 
     await db.execute('''
       CREATE TABLE expenses(
@@ -161,7 +161,6 @@ class DBHelper {
         category TEXT
       )
     ''');
-    print('DBHelper: Expenses table created.');
 
     await db.execute('''
       CREATE TABLE purchases(
@@ -173,7 +172,6 @@ class DBHelper {
         FOREIGN KEY (supplier_id) REFERENCES suppliers (id)
       )
     ''');
-    print('DBHelper: Purchases table created.');
 
     await db.execute('''
       CREATE TABLE purchase_items(
@@ -186,7 +184,6 @@ class DBHelper {
         FOREIGN KEY (product_id) REFERENCES products (id)
       )
     ''');
-    print('DBHelper: Purchase items table created.');
 
     await db.execute('''
       CREATE TABLE product_batches(
@@ -197,7 +194,6 @@ class DBHelper {
         FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
       )
     ''');
-    print('DBHelper: Product batches table created.');
 
     await db.execute('''
       CREATE TABLE settings(
@@ -205,11 +201,11 @@ class DBHelper {
         value TEXT
       )
     ''');
-    print('DBHelper: Settings table created.');
+
+    debugPrint('DBHelper: schema created at version $version');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    print('DBHelper: Upgrading database from version $oldVersion to $newVersion...');
     if (oldVersion < 2) {
       await db.execute('''
         CREATE TABLE suppliers(
@@ -227,7 +223,7 @@ class DBHelper {
       try {
         await db.execute('ALTER TABLE products ADD COLUMN expiration_date TEXT');
       } catch (e) {
-        print('DBHelper: Column expiration_date might already exist: $e');
+        debugPrint('DBHelper: v3 - expiration_date already exists: $e');
       }
     }
     if (oldVersion < 4) {
@@ -235,14 +231,14 @@ class DBHelper {
         await db.execute("ALTER TABLE products ADD COLUMN product_type TEXT NOT NULL DEFAULT 'product'");
         await db.execute('ALTER TABLE products ADD COLUMN unit TEXT');
       } catch (e) {
-        print('DBHelper: Columns product_type or unit might already exist: $e');
+        debugPrint('DBHelper: v4 - columns might already exist: $e');
       }
     }
     if (oldVersion < 5) {
       try {
         await db.execute('ALTER TABLE sales ADD COLUMN customer_id INTEGER');
       } catch (e) {
-        print('DBHelper: Column customer_id might already exist: $e');
+        debugPrint('DBHelper: v5 - customer_id might already exist: $e');
       }
       await db.execute('''
         CREATE TABLE customers(
@@ -276,7 +272,7 @@ class DBHelper {
           category TEXT
         )
       ''');
-      print('DBHelper: Upgraded to version 6 (Expenses table created).');
+      debugPrint('DBHelper: upgraded to v6 (expenses table)');
     }
     if (oldVersion < 7) {
       await db.execute('''
@@ -300,14 +296,14 @@ class DBHelper {
           FOREIGN KEY (product_id) REFERENCES products (id)
         )
       ''');
-      print('DBHelper: Upgraded to version 7 (Purchase tables created).');
+      debugPrint('DBHelper: upgraded to v7 (purchase tables)');
     }
     if (oldVersion < 8) {
       try {
         await db.execute('ALTER TABLE customers ADD COLUMN points INTEGER DEFAULT 0');
-        print('DBHelper: Upgraded to version 8 (Points column added to customers).');
+        debugPrint('DBHelper: upgraded to v8 (points column)');
       } catch (e) {
-        print('DBHelper: Column points might already exist: $e');
+        debugPrint('DBHelper: v8 - points might already exist: $e');
       }
     }
     if (oldVersion < 9) {
@@ -320,13 +316,11 @@ class DBHelper {
           FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
         )
       ''');
-      
-      // MIGRACIÓN: Mover stock actual y vencimiento a la tabla de lotes
       await db.execute('''
         INSERT INTO product_batches (product_id, expiration_date, stock)
         SELECT id, expiration_date, stock FROM products WHERE stock > 0 OR expiration_date IS NOT NULL
       ''');
-      print('DBHelper: Upgraded to version 9 (Product batches created and migrated).');
+      debugPrint('DBHelper: upgraded to v9 (product batches)');
     }
     if (oldVersion < 10) {
       await db.execute('''
@@ -335,22 +329,20 @@ class DBHelper {
           value TEXT
         )
       ''');
-      print('DBHelper: Upgraded to version 10 (Settings table created).');
+      debugPrint('DBHelper: upgraded to v10 (settings table)');
     }
     if (oldVersion < 11) {
       try {
         await db.execute('ALTER TABLE products ADD COLUMN category TEXT');
       } catch (e) {
-        print('DBHelper: Column category might already exist: $e');
+        debugPrint('DBHelper: v11 - category might already exist: $e');
       }
-      
       await db.execute('''
         CREATE TABLE IF NOT EXISTS categories(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL UNIQUE
         )
       ''');
-      
       await db.execute('''
         CREATE TABLE IF NOT EXISTS supplier_appointments(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -360,21 +352,45 @@ class DBHelper {
           FOREIGN KEY (supplier_id) REFERENCES suppliers (id) ON DELETE CASCADE
         )
       ''');
-      print('DBHelper: Upgraded to version 11 (Added category column and missing tables).');
+      debugPrint('DBHelper: upgraded to v11 (categories + supplier_appointments)');
     }
     if (oldVersion < 12) {
       try {
-        var columns = await db.rawQuery('PRAGMA table_info(products)');
-        bool hasCategory = columns.any((column) => column['name'] == 'category');
+        final columns = await db.rawQuery('PRAGMA table_info(products)');
+        final hasCategory = columns.any((col) => col['name'] == 'category');
         if (!hasCategory) {
           await db.execute('ALTER TABLE products ADD COLUMN category TEXT');
-          print('DBHelper: [DEBUG] Category column added in version 12.');
-        } else {
-          print('DBHelper: [DEBUG] Category column already exists, skipping.');
         }
       } catch (e) {
-        print('DBHelper: [DEBUG] Error checking/adding category column: $e');
+        debugPrint('DBHelper: v12 - error checking category: $e');
       }
+      debugPrint('DBHelper: upgraded to v12');
+    }
+    if (oldVersion < 13) {
+      try {
+        await db.execute('ALTER TABLE sale_items ADD COLUMN discount REAL NOT NULL DEFAULT 0');
+        debugPrint('DBHelper: upgraded to v13 (discount on sale_items)');
+      } catch (e) {
+        debugPrint('DBHelper: v13 - discount might already exist: $e');
+      }
+    }
+    if (oldVersion < 14) {
+      try {
+        await db.execute("ALTER TABLE sales ADD COLUMN status TEXT NOT NULL DEFAULT 'completed'");
+        debugPrint('DBHelper: upgraded to v14 (status on sales)');
+      } catch (e) {
+        debugPrint('DBHelper: v14 - status might already exist: $e');
+      }
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sale_payments(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sale_id INTEGER NOT NULL,
+          payment_method TEXT NOT NULL,
+          amount REAL NOT NULL,
+          FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE CASCADE
+        )
+      ''');
+      debugPrint('DBHelper: upgraded to v14 (sale_payments table)');
     }
   }
 }

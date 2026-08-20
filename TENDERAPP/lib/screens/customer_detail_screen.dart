@@ -5,6 +5,8 @@ import '../models/customer_model.dart';
 import '../models/customer_movement_model.dart';
 import '../providers/customer_provider.dart';
 import '../api/currency_formatter.dart';
+import '../constants/app_constants.dart';
+import 'add_customer_screen.dart';
 
 class CustomerDetailScreen extends StatefulWidget {
   final Customer customer;
@@ -16,6 +18,10 @@ class CustomerDetailScreen extends StatefulWidget {
 }
 
 class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
+  int _historyVersion = 0;
+
+  void _refreshHistory() => setState(() => _historyVersion++);
+
   @override
   Widget build(BuildContext context) {
     final customerProvider = Provider.of<CustomerProvider>(context);
@@ -32,7 +38,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
-              // Navegar a editar cliente si se desea
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AddCustomerScreen(customer: currentCustomer),
+                ),
+              );
             },
           ),
         ],
@@ -43,6 +54,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           const Divider(height: 1),
           Expanded(
             child: FutureBuilder<List<CustomerMovement>>(
+              key: ValueKey(_historyVersion),
               future: customerProvider.getCustomerHistory(currentCustomer.id!),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -62,7 +74,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
               },
             ),
           ),
-          _buildActionButtons(context, currentCustomer),
+          _buildActionButtons(context, currentCustomer, _refreshHistory),
         ],
       ),
     );
@@ -104,7 +116,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   }
 
   Widget _buildMovementTile(CustomerMovement movement) {
-    final isCargo = movement.type == 'Cargo';
+    final isCargo = movement.type == MovementType.charge;
     return ListTile(
       leading: Icon(
         isCargo ? Icons.arrow_upward : Icons.arrow_downward,
@@ -122,7 +134,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, Customer customer) {
+  Widget _buildActionButtons(BuildContext context, Customer customer, VoidCallback onAbonoRegistered) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -133,7 +145,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         children: [
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () => _showAbonoDialog(context, customer),
+              onPressed: () => _showAbonoDialog(context, customer, onAbonoRegistered),
               icon: const Icon(Icons.payments),
               label: const Text('ABONAR'),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
@@ -264,7 +276,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     );
   }
 
-  void _showAbonoDialog(BuildContext context, Customer customer) {
+  void _showAbonoDialog(BuildContext context, Customer customer, VoidCallback onRegistered) {
     final controller = TextEditingController();
     showDialog(
       context: context,
@@ -286,13 +298,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                 final movement = CustomerMovement(
                   customerId: customer.id!,
                   dateTime: DateTime.now().toIso8601String(),
-                  type: 'Abono',
+                  type: MovementType.payment,
                   amount: amount,
                   description: 'Abono a la deuda',
                 );
                 await Provider.of<CustomerProvider>(context, listen: false).registerMovement(movement);
-                if (mounted) {
+                if (context.mounted) {
                   Navigator.pop(context);
+                  onRegistered();
                 }
               }
             },

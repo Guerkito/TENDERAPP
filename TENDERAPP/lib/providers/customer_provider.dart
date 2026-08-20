@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import '../api/db_helper.dart';
+import '../constants/app_constants.dart';
 import '../models/customer_model.dart';
 import '../models/customer_movement_model.dart';
 
@@ -37,7 +38,7 @@ class CustomerProvider with ChangeNotifier {
       await txn.insert('customer_movements', movement.toMap());
 
       // 2. Actualizar el saldo del cliente
-      final adjustment = movement.type == 'Cargo' ? movement.amount : -movement.amount;
+      final adjustment = movement.type == MovementType.charge ? movement.amount : -movement.amount;
       await txn.rawUpdate(
         'UPDATE customers SET total_pending_balance = total_pending_balance + ? WHERE id = ?',
         [adjustment, movement.customerId]

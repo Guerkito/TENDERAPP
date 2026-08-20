@@ -1,9 +1,12 @@
+import '../constants/app_constants.dart';
+
 class Sale {
   int? id;
   double totalAmount;
   String paymentMethod;
-  String saleDate; // Stored as ISO 8601 string
+  String saleDate;
   int? customerId;
+  String status;
 
   Sale({
     this.id,
@@ -11,6 +14,7 @@ class Sale {
     required this.paymentMethod,
     required this.saleDate,
     this.customerId,
+    this.status = SaleStatus.completed,
   });
 
   Map<String, dynamic> toMap() {
@@ -20,6 +24,7 @@ class Sale {
       'payment_method': paymentMethod,
       'sale_date': saleDate,
       'customer_id': customerId,
+      'status': status,
     };
   }
 
@@ -30,6 +35,7 @@ class Sale {
       paymentMethod: map['payment_method'],
       saleDate: map['sale_date'],
       customerId: map['customer_id'],
+      status: map['status'] as String? ?? SaleStatus.completed,
     );
   }
 }

@@ -7,9 +7,9 @@ import '../providers/settings_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../api/currency_formatter.dart';
 import 'expiring_products_screen.dart';
-import 'inventory_screen.dart';
 import 'add_customer_screen.dart';
 import 'expenses_screen.dart';
+import 'cash_register_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -29,16 +29,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadData() async {
     final now = DateTime.now();
-    await Provider.of<StatisticsProvider>(context, listen: false).loadStatistics(
-      year: now.year,
-      month: now.month,
-      day: now.day,
-    );
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+    await Provider.of<StatisticsProvider>(context, listen: false)
+        .loadStatistics(year: now.year, month: now.month, day: now.day);
+    if (mounted) setState(() => _isLoading = false);
   }
 
   @override
@@ -46,9 +39,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final stats = Provider.of<StatisticsProvider>(context);
     final storeName = Provider.of<SettingsProvider>(context).storeName;
     final productProvider = Provider.of<ProductProvider>(context);
-    final navProvider = Provider.of<NavigationProvider>(context, listen: false);
+    final navProvider =
+        Provider.of<NavigationProvider>(context, listen: false);
 
-    // Utilidad según brief: Ventas - Gastos
     final dailyUtility = stats.totalSalesAmount - stats.totalExpenses;
 
     return Scaffold(
@@ -56,7 +49,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // Header del Home
           SliverToBoxAdapter(
             child: Container(
               padding: const EdgeInsets.fromLTRB(20, 60, 20, 40),
@@ -102,22 +94,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           color: const Color(0xFF00DF82).withOpacity(0.15),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.storefront_rounded, color: Color(0xFF00DF82), size: 28),
+                        child: const Icon(Icons.storefront_rounded,
+                            color: Color(0xFF00DF82), size: 28),
                       ),
                     ],
                   ),
                   const SizedBox(height: 25),
-                  // Alerta activa (si existe)
-                  if (productProvider.lowStockProducts.isNotEmpty || productProvider.expiringProducts.isNotEmpty)
+                  if (productProvider.lowStockProducts.isNotEmpty ||
+                      productProvider.expiringProducts.isNotEmpty)
                     _buildActiveAlertCard(productProvider),
                 ],
               ),
             ),
           ),
-
           if (_isLoading)
             const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator(color: Color(0xFF00DF82))),
+              child: Center(
+                  child: CircularProgressIndicator(color: Color(0xFF00DF82))),
             )
           else
             SliverPadding(
@@ -139,19 +132,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         'Gastos',
                         PhosphorIcons.receipt(PhosphorIconsStyle.bold),
                         const Color(0xFFFF3B30),
-                        () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ExpensesScreen())),
+                        () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const ExpensesScreen())),
                       ),
                       _buildQuickAction(
                         'Cliente',
                         PhosphorIcons.userPlus(PhosphorIconsStyle.bold),
                         const Color(0xFF007AFF),
-                        () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddCustomerScreen())),
+                        () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const AddCustomerScreen())),
                       ),
                       _buildQuickAction(
                         'Stock',
                         PhosphorIcons.package(PhosphorIconsStyle.bold),
                         const Color(0xFF5856D6),
                         () => navProvider.setIndex(2),
+                      ),
+                      _buildQuickAction(
+                        'Caja',
+                        PhosphorIcons.currencyDollar(PhosphorIconsStyle.bold),
+                        const Color(0xFFFF9500),
+                        () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const CashRegisterScreen())),
                       ),
                     ],
                   ),
@@ -166,6 +174,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           stats.totalSalesAmount,
                           PhosphorIcons.trendUp(PhosphorIconsStyle.bold),
                           const Color(0xFF00DF82),
+                          subtitle: '${stats.dailyTransactionCount} transacciones',
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -208,14 +217,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildQuickAction(String label, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildQuickAction(
+      String label, IconData icon, Color color, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
@@ -227,19 +237,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ],
             ),
-            child: Icon(icon, color: color, size: 26),
+            child: Icon(icon, color: color, size: 24),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1A1A1A)),
+            style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1A1A1A)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMetricCard(String label, double value, IconData icon, Color color, {bool isWide = false}) {
+  Widget _buildMetricCard(String label, double value, IconData icon, Color color,
+      {bool isWide = false, String? subtitle}) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -269,7 +283,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               Container(
                 padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                    color: color.withOpacity(0.1), shape: BoxShape.circle),
                 child: Icon(icon, color: color, size: 16),
               ),
             ],
@@ -284,6 +299,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               letterSpacing: -1,
             ),
           ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(subtitle,
+                style:
+                    const TextStyle(color: Color(0xFF8A8A8A), fontSize: 12)),
+          ],
         ],
       ),
     );
@@ -305,7 +326,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return InkWell(
       onTap: () {
         if (expiringCount > 0) {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const ExpiringProductsScreen()));
+          Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const ExpiringProductsScreen()));
         } else {
           Provider.of<NavigationProvider>(context, listen: false).setIndex(2);
         }
@@ -322,26 +344,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(color: Color(0xFF00DF82), shape: BoxShape.circle),
-              child: const Icon(Icons.bolt_rounded, color: Color(0xFF1A3C2B), size: 20),
+              decoration: const BoxDecoration(
+                  color: Color(0xFF00DF82), shape: BoxShape.circle),
+              child: const Icon(Icons.bolt_rounded,
+                  color: Color(0xFF1A3C2B), size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Acción Necesaria',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                  Text(
-                    message,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w400),
-                  ),
+                  const Text('Acción Necesaria',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14)),
+                  Text(message,
+                      style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400)),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white54, size: 14),
+            const Icon(Icons.arrow_forward_ios_rounded,
+                color: Colors.white54, size: 14),
           ],
         ),
       ),

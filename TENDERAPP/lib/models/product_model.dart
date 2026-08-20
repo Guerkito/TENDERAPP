@@ -50,6 +50,12 @@ class Product {
     return (map['sale_price'] as num).toDouble();
   }
 
+  @override
+  bool operator ==(Object other) => other is Product && other.id == id;
+
+  @override
+  int get hashCode => id.hashCode;
+
   factory Product.fromMap(Map<String, dynamic> map, {List<ProductBatch> batches = const []}) {
     return Product(
       id: map['id'],

@@ -108,7 +108,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           description: _descriptionController.text.isNotEmpty ? _descriptionController.text : null,
           purchasePrice: CurrencyFormatter.parse(_purchasePriceController.text),
           salePrice: CurrencyFormatter.parse(_salePriceController.text),
-          stock: int.tryParse(_stockController.text) ?? 0,
+          stock: double.tryParse(_stockController.text) ?? 0,
           expirationDate: _selectedExpirationDate?.toIso8601String(),
           productType: _productType,
           unit: _unitController.text.isNotEmpty ? _unitController.text : null,
@@ -283,7 +283,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     filled: true,
                     fillColor: Colors.white,
                   ),
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(

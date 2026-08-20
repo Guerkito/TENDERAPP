@@ -65,13 +65,18 @@ class ProductProvider with ChangeNotifier {
       return Product.fromMap(pMap, batches: batches);
     }).toList();
 
-    await loadExpiringProducts();
-    await loadLowStockProducts();
-    
+    await _loadExpiringProducts();
+    await _loadLowStockProducts();
+
     notifyListeners();
   }
 
   Future<void> loadExpiringProducts({int days = 30}) async {
+    await _loadExpiringProducts(days: days);
+    notifyListeners();
+  }
+
+  Future<void> _loadExpiringProducts({int days = 30}) async {
     final db = await DBHelper().database;
     final now = DateTime.now();
     final inXDays = now.add(Duration(days: days));
@@ -99,27 +104,28 @@ class ProductProvider with ChangeNotifier {
       return Product.fromMap(pMap);
     }).toList();
 
-    // NOTIFICACIÓN: Si hay productos por vencer, avisar del más próximo
-    if (_expiringProducts.isNotEmpty) {
+    // NOTIFICACIÓN: Solo avisar si la lista cambió de vacía a no vacía
+    if (_expiringProducts.isNotEmpty && _expiringProducts.length == 1) {
       final first = _expiringProducts.first;
       NotificationService().showExpiryAlert(first.name, first.expirationDate!);
     }
-    
-    notifyListeners();
   }
 
   Future<void> loadLowStockProducts({int threshold = 5}) async {
+    await _loadLowStockProducts(threshold: threshold);
+    notifyListeners();
+  }
+
+  Future<void> _loadLowStockProducts({int threshold = 5}) async {
     // Calculamos el stock bajo basándonos en la suma de lotes
     _lowStockProducts = _products.where((p) => p.stock <= threshold).toList();
 
-    // NOTIFICACIÓN: Si hay stock crítico (ej. <= 2), avisar
+    // NOTIFICACIÓN: Solo avisar si la lista cambió de vacía a no vacía
     final critical = _lowStockProducts.where((p) => p.stock <= 2).toList();
-    if (critical.isNotEmpty) {
+    if (critical.isNotEmpty && critical.length == 1) {
       final first = critical.first;
       NotificationService().showLowStockAlert(first.name, first.stock.toDouble());
     }
-    
-    notifyListeners();
   }
 
   Future<void> addProduct(Product product) async {
@@ -145,7 +151,7 @@ class ProductProvider with ChangeNotifier {
       });
       await loadProducts();
     } catch (e) {
-      print('ProductProvider: Error adding product: $e');
+      debugPrint('ProductProvider: Error adding product: $e');
       rethrow;
     }
   }
@@ -181,7 +187,7 @@ class ProductProvider with ChangeNotifier {
               'product_batches',
               where: 'product_id = ? AND stock > 0',
               whereArgs: [product.id],
-              orderBy: 'expiration_date ASC',
+              orderBy: 'CASE WHEN expiration_date IS NULL THEN 1 ELSE 0 END ASC, expiration_date ASC',
             );
 
             for (var bMap in sortedBatches) {
@@ -217,7 +223,7 @@ class ProductProvider with ChangeNotifier {
 
       await loadProducts();
     } catch (e) {
-      print('ProductProvider: Error updating product: $e');
+      debugPrint('ProductProvider: Error updating product: $e');
       rethrow;
     }
   }
@@ -233,7 +239,7 @@ class ProductProvider with ChangeNotifier {
       // Los lotes se borran por el ON DELETE CASCADE definido en SQL
       await loadProducts();
     } catch (e) {
-      print('ProductProvider: Error deleting product: $e');
+      debugPrint('ProductProvider: Error deleting product: $e');
       rethrow;
     }
   }
