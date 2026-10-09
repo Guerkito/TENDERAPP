@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart';
 import '../api/db_helper.dart';
 import '../constants/app_constants.dart';
 import '../models/customer_model.dart';
 import '../models/customer_movement_model.dart';
+import '../models/loyalty.dart';
 
 class CustomerProvider with ChangeNotifier {
   List<Customer> _customers = [];
@@ -67,6 +67,87 @@ class CustomerProvider with ChangeNotifier {
       whereArgs: [customer.id],
     );
     await loadCustomers();
+  }
+
+  Future<int> _loyaltyGoal() async {
+    final db = await DBHelper().database;
+    final rows = await db.query('settings',
+        where: 'key = ?', whereArgs: ['loyalty_goal']);
+    if (rows.isEmpty) return 6;
+    return int.tryParse(rows.first['value'] as String? ?? '') ?? 6;
+  }
+
+  Future<LoyaltySummary> getLoyaltySummary(int customerId) async {
+    final db = await DBHelper().database;
+    final goal = await _loyaltyGoal();
+    final result = await db.rawQuery('''
+      SELECT
+        COALESCE(SUM(CASE WHEN type = ? THEN amount ELSE 0 END), 0) AS total_stamps,
+        COALESCE(SUM(CASE WHEN type = ? THEN amount ELSE 0 END), 0) AS redeemed
+      FROM loyalty_movements WHERE customer_id = ?
+    ''', [LoyaltyType.stamp, LoyaltyType.redeem, customerId]);
+    final row = result.first;
+    return LoyaltySummary.fromTotals(
+      totalStamps: (row['total_stamps'] as num).toInt(),
+      rewardsRedeemed: (row['redeemed'] as num).toInt(),
+      goal: goal,
+    );
+  }
+
+  Future<List<LoyaltyBoardRow>> getLoyaltyBoard() async {
+    final db = await DBHelper().database;
+    final goal = await _loyaltyGoal();
+    final rows = await db.rawQuery('''
+      SELECT c.id AS customer_id, c.name AS name, c.phone AS phone,
+        COALESCE(SUM(CASE WHEN m.type = ? THEN m.amount ELSE 0 END), 0) AS total_stamps,
+        COALESCE(SUM(CASE WHEN m.type = ? THEN m.amount ELSE 0 END), 0) AS redeemed
+      FROM customers c
+      LEFT JOIN loyalty_movements m ON m.customer_id = c.id
+      GROUP BY c.id
+      ORDER BY c.name ASC
+    ''', [LoyaltyType.stamp, LoyaltyType.redeem]);
+    return rows
+        .map((row) => LoyaltyBoardRow(
+              customerId: row['customer_id'] as int,
+              name: row['name'] as String,
+              phone: row['phone'] as String?,
+              summary: LoyaltySummary.fromTotals(
+                totalStamps: (row['total_stamps'] as num).toInt(),
+                rewardsRedeemed: (row['redeemed'] as num).toInt(),
+                goal: goal,
+              ),
+            ))
+        .toList();
+  }
+
+  Future<void> addLoyaltyStamp(int customerId,
+      {String? note, String source = LoyaltySource.manual}) async {
+    final db = await DBHelper().database;
+    await db.insert('loyalty_movements', {
+      'customer_id': customerId,
+      'date_time': DateTime.now().toIso8601String(),
+      'type': LoyaltyType.stamp,
+      'amount': 1,
+      'note': note,
+      'source': source,
+    });
+    notifyListeners();
+  }
+
+  Future<bool> redeemLoyaltyReward(int customerId) async {
+    final summary = await getLoyaltySummary(customerId);
+    if (summary.rewardsAvailable <= 0) return false;
+    final db = await DBHelper().database;
+    await db.insert('loyalty_movements', {
+      'customer_id': customerId,
+      'date_time': DateTime.now().toIso8601String(),
+      'type': LoyaltyType.redeem,
+      'amount': 1,
+      'note': null,
+      'source': LoyaltySource.manual,
+    });
+    notifyListeners();
+    return true;
   }
 
   Future<void> redeemPoints(int customerId, int pointsToRedeem, {double? cashValue}) async {

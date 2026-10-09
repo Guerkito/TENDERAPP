@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/navigation_provider.dart';
+import '../widgets/business_type_picker.dart';
 import 'dashboard_screen.dart';
 import 'sales_screen.dart';
 import 'inventory_screen.dart';
@@ -55,54 +55,80 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     // Si tiene PIN, _isUnlocked permanece false → PinScreen se muestra
 
-    if (!settings.isNameSet) {
-      _showStoreNameDialog();
+    if (!settings.isNameSet || !settings.isBusinessTypeSet) {
+      _showOnboardingDialog(needsName: !settings.isNameSet);
     }
   }
 
-  void _showStoreNameDialog() {
-    final controller = TextEditingController();
+  void _showOnboardingDialog({required bool needsName}) {
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    final nameController = TextEditingController();
+    String? selectedType;
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('¡Bienvenido!',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-                'Personaliza tus recibos y reportes. ¿Cómo se llama tu tienda?'),
-            const SizedBox(height: 20),
-            TextField(
-              controller: controller,
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: 'Nombre de tu tienda',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16)),
-                hintText: 'Ej: Tienda de Don Pepe',
-              ),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Text('¡Bienvenido!',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                    'Configura tu negocio para personalizar la aplicación.'),
+                if (needsName) ...[
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nameController,
+                    autofocus: true,
+                    onChanged: (_) => setDialogState(() {}),
+                    decoration: InputDecoration(
+                      labelText: 'Nombre del negocio',
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      hintText: 'Ej: Licorera El Buen Trago',
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                const Text('¿Qué tipo de negocio tienes?',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                BusinessTypePicker(
+                  selectedId: selectedType,
+                  onSelected: (id) =>
+                      setDialogState(() => selectedType = id),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: (selectedType != null &&
+                      (!needsName || nameController.text.trim().isNotEmpty))
+                  ? () async {
+                      if (needsName) {
+                        await settings
+                            .updateStoreName(nameController.text.trim());
+                      }
+                      await settings.updateBusinessType(selectedType!);
+                      if (dialogContext.mounted) {
+                        Navigator.pop(dialogContext);
+                      }
+                    }
+                  : null,
+              child: const Text('EMPEZAR',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF00DF82))),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              if (controller.text.trim().isNotEmpty) {
-                Provider.of<SettingsProvider>(context, listen: false)
-                    .updateStoreName(controller.text.trim());
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('EMPEZAR',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF00DF82))),
-          ),
-        ],
       ),
     );
   }
@@ -182,28 +208,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 },
                 destinations: [
                   _buildDestination(
-                    PhosphorIcons.house(PhosphorIconsStyle.regular),
-                    PhosphorIcons.house(PhosphorIconsStyle.fill),
+                    Icons.home_outlined,
+                    Icons.home,
                     'Inicio',
                   ),
                   _buildDestination(
-                    PhosphorIcons.shoppingBag(PhosphorIconsStyle.regular),
-                    PhosphorIcons.shoppingBag(PhosphorIconsStyle.fill),
+                    Icons.shopping_bag_outlined,
+                    Icons.shopping_bag,
                     'Caja',
                   ),
                   _buildDestination(
-                    PhosphorIcons.package(PhosphorIconsStyle.regular),
-                    PhosphorIcons.package(PhosphorIconsStyle.fill),
+                    Icons.inventory_2_outlined,
+                    Icons.inventory_2,
                     'Stock',
                   ),
                   _buildDestination(
-                    PhosphorIcons.users(PhosphorIconsStyle.regular),
-                    PhosphorIcons.users(PhosphorIconsStyle.fill),
+                    Icons.people_outline,
+                    Icons.people,
                     'Clientes',
                   ),
                   _buildDestination(
-                    PhosphorIcons.dotsThreeCircle(PhosphorIconsStyle.regular),
-                    PhosphorIcons.dotsThreeCircle(PhosphorIconsStyle.fill),
+                    Icons.more_horiz,
+                    Icons.more_horiz,
                     'Más',
                   ),
                 ],

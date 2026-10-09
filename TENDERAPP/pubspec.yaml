@@ -21,9 +21,9 @@ dependencies:
   table_calendar: ^3.0.9
   # flutter_vector_icons: ^2.0.0 # Removed in favor of phosphor_flutter
   fl_chart: ^0.68.0
-  phosphor_flutter: ^2.0.0 # Added phosphor_flutter
   path_provider: any # Se ajusta a 'any' para resolución automática de versión
   sqflite_common_ffi: ^2.3.3 # Updated sqflite_common_ffi
+  sqlite3_flutter_libs: ^0.5.20
   intl: ^0.20.2
   url_launcher: ^6.3.1
   pdf: ^3.10.4
@@ -34,6 +34,8 @@ dependencies:
   share_plus: ^10.1.0
   file_picker: ^8.1.7
   crypto: ^3.0.3
+  supabase_flutter: ^2.8.0
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:

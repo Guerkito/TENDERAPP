@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../constants/app_constants.dart';
 import '../models/product_model.dart';
 import '../providers/product_provider.dart';
@@ -916,7 +915,7 @@ class _SalesScreenState extends State<SalesScreen> {
               tooltip: 'Limpiar carrito',
             ),
           IconButton(
-            icon: Icon(PhosphorIcons.qrCode(PhosphorIconsStyle.regular),
+            icon: Icon(Icons.qr_code_scanner,
                 size: 28),
             onPressed: _scanBarcodeAndAddToCart,
           ),
@@ -1039,8 +1038,7 @@ class _SalesScreenState extends State<SalesScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                              PhosphorIcons.shoppingCart(
-                                  PhosphorIconsStyle.thin),
+                              Icons.shopping_cart_outlined,
                               size: 100,
                               color: Colors.grey[300]),
                           const SizedBox(height: 20),

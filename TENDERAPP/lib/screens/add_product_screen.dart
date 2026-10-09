@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 
 import '../models/product_model.dart';
 import '../providers/product_provider.dart';
+import '../providers/settings_provider.dart';
+import '../constants/business_types.dart';
 import '../api/currency_formatter.dart';
 
 class AddProductScreen extends StatefulWidget {
@@ -170,13 +172,21 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 const SizedBox(height: 16),
                 Consumer<ProductProvider>(
                   builder: (context, provider, child) {
+                    final seedCategories = businessTypeById(
+                            Provider.of<SettingsProvider>(context, listen: false)
+                                .businessType)
+                        .seedCategories;
+                    final categories = <String>{
+                      ...seedCategories,
+                      ...provider.categories,
+                    }.toList();
                     return Autocomplete<String>(
                       initialValue: TextEditingValue(text: _categoryController.text),
                       optionsBuilder: (TextEditingValue textEditingValue) {
                         if (textEditingValue.text == '') {
-                          return provider.categories;
+                          return categories;
                         }
-                        return provider.categories.where((String option) {
+                        return categories.where((String option) {
                           return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
                         });
                       },

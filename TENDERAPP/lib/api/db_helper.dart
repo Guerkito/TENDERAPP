@@ -35,7 +35,7 @@ class DBHelper {
       debugPrint('DBHelper: database path: $path');
       return await openDatabase(
         path,
-        version: 14,
+        version: 15,
         onCreate: _onCreate,
         onUpgrade: (db, oldV, newV) async {
           debugPrint('DBHelper: migration $oldV -> $newV');
@@ -199,6 +199,19 @@ class DBHelper {
       CREATE TABLE settings(
         key TEXT PRIMARY KEY,
         value TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE loyalty_movements(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_id INTEGER NOT NULL,
+        date_time TEXT NOT NULL,
+        type TEXT NOT NULL,
+        amount INTEGER NOT NULL DEFAULT 1,
+        note TEXT,
+        source TEXT,
+        FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE
       )
     ''');
 
@@ -391,6 +404,21 @@ class DBHelper {
         )
       ''');
       debugPrint('DBHelper: upgraded to v14 (sale_payments table)');
+    }
+    if (oldVersion < 15) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS loyalty_movements(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id INTEGER NOT NULL,
+          date_time TEXT NOT NULL,
+          type TEXT NOT NULL,
+          amount INTEGER NOT NULL DEFAULT 1,
+          note TEXT,
+          source TEXT,
+          FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE
+        )
+      ''');
+      debugPrint('DBHelper: upgraded to v15 (loyalty_movements table)');
     }
   }
 }

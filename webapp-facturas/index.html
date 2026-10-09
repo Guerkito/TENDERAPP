@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facturas de Fidelización</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  body { background: #F5F7FA; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; }
+  .card { background: #fff; border-radius: 24px; padding: 28px 22px; width: 100%; max-width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,.06); }
+  .store { background: #1A3C2B; color: #fff; border-radius: 20px; padding: 18px 20px; width: 100%; max-width: 420px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+  .store .dot { width: 40px; height: 40px; border-radius: 50%; background: rgba(0, 223, 130, .15); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .store h1 { font-size: 17px; font-weight: 800; }
+  .store p { font-size: 12px; color: rgba(255,255,255,.7); }
+  h2 { font-size: 19px; color: #1A1A1A; margin-bottom: 6px; }
+  .sub { font-size: 13px; color: #8A8A8A; margin-bottom: 20px; }
+  label { display: block; font-size: 13px; font-weight: 700; color: #1A1A1A; margin-bottom: 6px; margin-top: 14px; }
+  input[type=tel], input[type=text] { width: 100%; padding: 13px 14px; border: 1.5px solid #E3E6EA; border-radius: 14px; font-size: 15px; outline: none; }
+  input:focus { border-color: #00DF82; }
+  input[type=file] { width: 100%; font-size: 13px; padding: 10px; border: 1.5px dashed #C9CFD6; border-radius: 14px; background: #FAFBFC; }
+  button { width: 100%; padding: 15px; margin-top: 20px; background: #00DF82; color: #1A3C2B; font-size: 16px; font-weight: 800; border: none; border-radius: 16px; cursor: pointer; }
+  button:disabled { opacity: .5; }
+  .msg { margin-top: 14px; font-size: 13px; padding: 12px; border-radius: 12px; display: none; }
+  .msg.err { display: block; background: #FFECEC; color: #C0392B; }
+  .msg.ok { display: block; background: #E7FBF1; color: #0B7A4B; }
+  .center { text-align: center; }
+  .big { font-size: 52px; margin-bottom: 12px; }
+  .hint { font-size: 12px; color: #8A8A8A; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<div class="store" id="storeBox" style="display:none">
+  <div class="dot">🏪</div>
+  <div>
+    <h1 id="storeName">...</h1>
+    <p>Tarjeta de fidelización</p>
+  </div>
+</div>
+
+<div class="card" id="card">
+  <div class="center big">📸</div>
+  <h2 class="center">Sube tu factura</h2>
+  <p class="sub center">Cada factura aprobada suma un sello en tu tarjeta.</p>
+
+  <form id="form">
+    <label for="phone">Tu número de celular</label>
+    <input type="tel" id="phone" placeholder="300 123 4567" inputmode="numeric" required>
+
+    <label for="name">Tu nombre (opcional)</label>
+    <input type="text" id="name" placeholder="Ej: María Pérez">
+
+    <label for="photo">Foto de la factura</label>
+    <input type="file" id="photo" accept="image/*" capture="environment" required>
+
+    <button type="submit" id="btn">ENVIAR FACTURA</button>
+    <div class="msg" id="msg"></div>
+    <p class="hint center">La tienda revisará tu factura y te sumará el sello.</p>
+  </form>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const SUPABASE_URL = 'https://qnbxbzpvjkwfmnvblqys.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFuYnhienB2amt3Zm1udmJscXlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE1NjM4MjEsImV4cCI6MjEwNzEzOTgyMX0.DtnStii_kcaib5LZo8Sm0QCAFdGFEsrMSZTcs9rn7-E';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const storeId = new URLSearchParams(location.search).get('store');
+const card = document.getElementById('card');
+const msg = document.getElementById('msg');
+const form = document.getElementById('form');
+const btn = document.getElementById('btn');
+
+function showError(text) {
+  card.innerHTML = '<div class="center big">😕</div><h2 class="center">No disponible</h2><p class="sub center">' + text + '</p>';
+}
+
+if (!storeId) {
+  showError('Escanea el código QR que está en el mostrador de la tienda.');
+} else {
+  const { data: storeName } = await supabase.rpc('store_name', { p_id: storeId });
+  if (!storeName) {
+    showError('Tienda no encontrada. Pide el QR actualizado en el mostrador.');
+  } else {
+    document.getElementById('storeName').textContent = storeName;
+    document.getElementById('storeBox').style.display = 'flex';
+  }
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  msg.className = 'msg';
+  const phone = document.getElementById('phone').value.replace(/\D/g, '');
+  const name = document.getElementById('name').value.trim();
+  const photo = document.getElementById('photo').files[0];
+
+  if (phone.length < 7) { msg.textContent = 'Escribe un número de celular válido.'; msg.className = 'msg err'; return; }
+  if (!photo) { msg.textContent = 'Toma o elige la foto de tu factura.'; msg.className = 'msg err'; return; }
+  if (photo.size > 10 * 1024 * 1024) { msg.textContent = 'La foto es muy grande (máx 10 MB).'; msg.className = 'msg err'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'ENVIANDO...';
+  try {
+    const ext = (photo.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `${storeId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error: upErr } = await supabase.storage.from('invoices').upload(path, photo, { contentType: photo.type || 'image/jpeg' });
+    if (upErr) throw upErr;
+    const { error: dbErr } = await supabase.from('receipt_submissions').insert({
+      store_id: storeId,
+      customer_phone: phone,
+      customer_name: name || null,
+      photo_path: path,
+    });
+    if (dbErr) throw dbErr;
+    card.innerHTML = '<div class="center big">✅</div><h2 class="center">¡Factura enviada!</h2><p class="sub center">La tienda la revisará y sumará el sello a tu tarjeta. ¡Gracias!</p>';
+  } catch (err) {
+    msg.textContent = 'No se pudo enviar: ' + (err.message || err);
+    msg.className = 'msg err';
+    btn.disabled = false;
+    btn.textContent = 'ENVIAR FACTURA';
+  }
+});
+</script>
+</body>
+</html>

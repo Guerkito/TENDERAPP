@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import '../providers/settings_provider.dart';
+import '../constants/business_types.dart';
+import '../widgets/business_type_picker.dart';
+import 'import_products_screen.dart';
+import 'loyalty_screen.dart';
+import 'receipt_review_screen.dart';
 import 'suppliers_screen.dart';
 import 'expenses_screen.dart';
 import 'statistics_screen.dart';
@@ -81,6 +85,39 @@ class MoreScreen extends StatelessWidget {
         }
       }
     }
+  }
+
+  void _showBusinessTypeDialog(BuildContext context, SettingsProvider settings) {
+    String selected = settings.businessType;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Text('Tipo de Negocio',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: BusinessTypePicker(
+              selectedId: selected,
+              onSelected: (id) => setDialogState(() => selected = id),
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('CANCELAR')),
+            ElevatedButton(
+              onPressed: () async {
+                await settings.updateBusinessType(selected);
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
+              },
+              child: const Text('GUARDAR'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _handlePinSettings(BuildContext context) async {
@@ -194,9 +231,17 @@ class MoreScreen extends StatelessWidget {
           _buildMenuSection('Negocio', [
             _buildMenuItem(
               context,
+              'Tipo de Negocio',
+              '${businessTypeById(settings.businessType).label} — toca para cambiar',
+              Icons.storefront,
+              const Color(0xFF00DF82),
+              () => _showBusinessTypeDialog(context, settings),
+            ),
+            _buildMenuItem(
+              context,
               'Proveedores',
               'Gestiona tus contactos de compra',
-              PhosphorIcons.truck(PhosphorIconsStyle.regular),
+              Icons.local_shipping,
               const Color(0xFF1A3C2B),
               () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const SuppliersScreen())),
@@ -205,10 +250,42 @@ class MoreScreen extends StatelessWidget {
               context,
               'Calendario de Visitas',
               'Agenda citas con proveedores',
-              PhosphorIcons.calendar(PhosphorIconsStyle.regular),
+              Icons.calendar_month,
               Colors.blue,
               () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const CalendarScreen())),
+            ),
+            _buildMenuItem(
+              context,
+              'Importar Productos (Excel)',
+              'Carga tu catálogo desde un archivo .xlsx',
+              Icons.upload_file,
+              Colors.teal,
+              () => Navigator.push(context,
+                  MaterialPageRoute(
+                      builder: (_) => const ImportProductsScreen())),
+            ),
+          ]),
+          const SizedBox(height: 24),
+          _buildMenuSection('Fidelización', [
+            _buildMenuItem(
+              context,
+              'Tarjetas de Fidelización',
+              'Sellos y premios de tus clientes',
+              Icons.card_giftcard,
+              Colors.purple,
+              () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const LoyaltyScreen())),
+            ),
+            _buildMenuItem(
+              context,
+              'Validar Facturas (Web)',
+              'Aprueba las facturas que suben tus clientes',
+              Icons.cloud_sync,
+              const Color(0xFF007AFF),
+              () => Navigator.push(context,
+                  MaterialPageRoute(
+                      builder: (_) => const ReceiptReviewScreen())),
             ),
           ]),
           const SizedBox(height: 24),
@@ -217,7 +294,7 @@ class MoreScreen extends StatelessWidget {
               context,
               'Historial de Ventas',
               'Registro detallado de transacciones',
-              PhosphorIcons.clockCounterClockwise(PhosphorIconsStyle.regular),
+              Icons.history,
               Colors.orange,
               () => Navigator.push(
                   context,
@@ -228,7 +305,7 @@ class MoreScreen extends StatelessWidget {
               context,
               'Historial de Gastos',
               'Consulta tus egresos pasados',
-              PhosphorIcons.receipt(PhosphorIconsStyle.regular),
+              Icons.receipt_long,
               Colors.redAccent,
               () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const ExpensesScreen())),
@@ -237,7 +314,7 @@ class MoreScreen extends StatelessWidget {
               context,
               'Estadísticas Detalladas',
               'Reportes y gráficas de venta',
-              PhosphorIcons.chartBar(PhosphorIconsStyle.regular),
+              Icons.bar_chart,
               const Color(0xFF00DF82),
               () => Navigator.push(
                   context,
@@ -248,7 +325,7 @@ class MoreScreen extends StatelessWidget {
               context,
               'Alertas de Stock',
               'Productos que requieren atención',
-              PhosphorIcons.bell(PhosphorIconsStyle.regular),
+              Icons.notifications,
               Colors.deepOrange,
               () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const AlertsScreen())),
@@ -257,7 +334,7 @@ class MoreScreen extends StatelessWidget {
               context,
               'Cierre de Caja',
               'Arqueo y resumen del día',
-              PhosphorIcons.currencyDollar(PhosphorIconsStyle.regular),
+              Icons.attach_money,
               const Color(0xFFFF9500),
               () => Navigator.push(
                   context,

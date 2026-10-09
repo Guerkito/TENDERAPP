@@ -23,7 +23,8 @@ class ProductProvider with ChangeNotifier {
     final List<Map<String, dynamic>> productMaps = await db.query('products');
 
     // 2. Obtener todas las categorías únicas presentes en los productos
-    final List<Map<String, dynamic>> catResult = await db.rawQuery('SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != ""');
+    final List<Map<String, dynamic>> catResult = await db.rawQuery(
+        "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != ''");
     _categories = catResult.map((e) => e['category'] as String).toList();
     if (!_categories.contains('General')) _categories.insert(0, 'General');
 
@@ -282,5 +283,52 @@ class ProductProvider with ChangeNotifier {
     );
 
     await loadProducts();
+  }
+
+  /// Importación masiva desde Excel. Omite duplicados por nombre o código de barras.
+  Future<({int imported, int skipped})> importProducts(
+      List<Product> products) async {
+    final db = await DBHelper().database;
+    int imported = 0;
+    int skipped = 0;
+
+    await db.transaction((txn) async {
+      final existing = await txn.query('products',
+          columns: ['name', 'barcode']);
+      final names = existing
+          .map((row) => (row['name'] as String).toLowerCase().trim())
+          .toSet();
+      final barcodes =
+          existing.map((row) => row['barcode']).whereType<String>().toSet();
+
+      for (final product in products) {
+        final name = product.name.toLowerCase().trim();
+        final barcode = product.barcode?.trim() ?? '';
+        if (names.contains(name) ||
+            (barcode.isNotEmpty && barcodes.contains(barcode))) {
+          skipped++;
+          continue;
+        }
+
+        final map = product.toMap();
+        map.remove('id');
+        final productId = await txn.insert('products', map);
+
+        if (product.stock > 0 || product.expirationDate != null) {
+          await txn.insert('product_batches', {
+            'product_id': productId,
+            'expiration_date': product.expirationDate,
+            'stock': product.stock.toDouble(),
+          });
+        }
+
+        names.add(name);
+        if (barcode.isNotEmpty) barcodes.add(barcode);
+        imported++;
+      }
+    });
+
+    await loadProducts();
+    return (imported: imported, skipped: skipped);
   }
 }

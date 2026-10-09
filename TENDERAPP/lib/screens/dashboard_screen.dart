@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../providers/statistics_provider.dart';
 import '../providers/product_provider.dart';
 import '../providers/settings_provider.dart';
@@ -124,13 +123,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       _buildQuickAction(
                         'Vender',
-                        PhosphorIcons.shoppingBag(PhosphorIconsStyle.bold),
+                        Icons.shopping_bag,
                         const Color(0xFF00DF82),
                         () => navProvider.setIndex(1),
                       ),
                       _buildQuickAction(
                         'Gastos',
-                        PhosphorIcons.receipt(PhosphorIconsStyle.bold),
+                        Icons.receipt_long,
                         const Color(0xFFFF3B30),
                         () => Navigator.push(
                             context,
@@ -139,7 +138,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       _buildQuickAction(
                         'Cliente',
-                        PhosphorIcons.userPlus(PhosphorIconsStyle.bold),
+                        Icons.person_add,
                         const Color(0xFF007AFF),
                         () => Navigator.push(
                             context,
@@ -148,13 +147,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       _buildQuickAction(
                         'Stock',
-                        PhosphorIcons.package(PhosphorIconsStyle.bold),
+                        Icons.inventory_2,
                         const Color(0xFF5856D6),
                         () => navProvider.setIndex(2),
                       ),
                       _buildQuickAction(
                         'Caja',
-                        PhosphorIcons.currencyDollar(PhosphorIconsStyle.bold),
+                        Icons.attach_money,
                         const Color(0xFFFF9500),
                         () => Navigator.push(
                             context,
@@ -172,7 +171,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: _buildMetricCard(
                           'Ventas',
                           stats.totalSalesAmount,
-                          PhosphorIcons.trendUp(PhosphorIconsStyle.bold),
+                          Icons.trending_up,
                           const Color(0xFF00DF82),
                           subtitle: '${stats.dailyTransactionCount} transacciones',
                         ),
@@ -182,7 +181,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: _buildMetricCard(
                           'Gastos',
                           stats.totalExpenses,
-                          PhosphorIcons.trendDown(PhosphorIconsStyle.bold),
+                          Icons.trending_down,
                           const Color(0xFFFF3B30),
                         ),
                       ),
@@ -192,7 +191,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   _buildMetricCard(
                     'Utilidad Estimada',
                     dailyUtility,
-                    PhosphorIcons.currencyDollar(PhosphorIconsStyle.bold),
+                    Icons.attach_money,
                     const Color(0xFF1A3C2B),
                     isWide: true,
                   ),

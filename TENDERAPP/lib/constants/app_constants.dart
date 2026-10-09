@@ -17,3 +17,13 @@ class SaleStatus {
   static const String completed = 'completed';
   static const String cancelled = 'cancelled';
 }
+
+class LoyaltyType {
+  static const String stamp = 'stamp';
+  static const String redeem = 'redeem';
+}
+
+class LoyaltySource {
+  static const String manual = 'manual';
+  static const String web = 'web';
+}

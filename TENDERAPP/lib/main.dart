@@ -16,6 +16,7 @@ import 'providers/settings_provider.dart';
 import 'providers/navigation_provider.dart';
 import 'providers/calendar_provider.dart';
 import 'api/notification_service.dart';
+import 'api/supabase_service.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
@@ -29,6 +30,11 @@ void main() async {
 
   await NotificationService().init();
   await initializeDateFormatting('es_ES', null);
+  try {
+    await SupabaseService.init();
+  } catch (e) {
+    debugPrint('main: Supabase no disponible por ahora: $e');
+  }
   runApp(
     MultiProvider(
       providers: [
@@ -82,7 +88,7 @@ class MyApp extends StatelessWidget {
             letterSpacing: -0.5,
           ),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 0,
           color: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
