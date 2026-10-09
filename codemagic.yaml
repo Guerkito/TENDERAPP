@@ -7,6 +7,8 @@ workflows:
     integrations:
       app_store_connect: TenderApp ASC Key
     environment:
+      groups:
+        - app_store_credentials
       flutter: stable
       xcode: latest
       cocoapods: default
@@ -15,6 +17,7 @@ workflows:
     scripts:
       - name: Set up code signing
         script: |
+          set -e
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           keychain add-certificates
