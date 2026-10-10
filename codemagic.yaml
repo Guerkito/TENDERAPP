@@ -18,8 +18,9 @@ workflows:
       - name: Set up code signing
         script: |
           set -e
+          echo "$CERT_KEY_B64" | openssl base64 -d -A > /tmp/cert_key.pem
           keychain initialize
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create --certificate-key=@file:/tmp/cert_key.pem
           keychain add-certificates
           xcode-project use-profiles
       - name: Get Flutter packages
