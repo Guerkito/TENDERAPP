@@ -47,6 +47,12 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Se usa la cámara para escanear códigos de barras de los productos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Se usa para adjuntar y compartir imágenes, por ejemplo fotos de productos o comprobantes.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Se usa para guardar recibos o reportes en tu galería cuando tú lo solicites.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>La aplicación no rastrea tu ubicación; este permiso proviene de librerías del sistema usadas para compartir documentos e impresión.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>
