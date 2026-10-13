@@ -45,7 +45,7 @@ import 'screens/receipt_review_screen.dart';
 import 'screens/store_profile_screen.dart';
 
 Future<void> _seed() async {
-  await seedDemoData();
+  debugPrint(await seedDemoData());
 }
 
 /// Pasos del recorrido: nombre + constructor + pestaña que debe activar.

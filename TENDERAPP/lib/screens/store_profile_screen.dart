@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 
 import '../api/supabase_service.dart';
 import '../constants/business_types.dart';
+import '../demo_seed.dart';
 import '../models/loyalty.dart';
 import '../providers/customer_provider.dart';
+import '../providers/product_provider.dart';
 import '../providers/sale_provider.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/loyalty_widgets.dart';
@@ -22,6 +24,7 @@ class StoreProfileScreen extends StatefulWidget {
 class _StoreProfileScreenState extends State<StoreProfileScreen> {
   late Future<List<LoyaltyBoardRow>> _future;
   bool _syncing = false;
+  bool _loadingDemo = false;
   String? _syncMessage;
 
   @override
@@ -98,6 +101,60 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
     }
   }
 
+  Future<void> _loadDemoData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Datos de demostración'),
+        content: const Text(
+            'Se cargarán productos, clientes con tarjetas, ventas de 2 semanas, gastos y proveedores de ejemplo.\n\nSolo funciona si el dispositivo está vacío (no pisa datos reales).'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('CANCELAR')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('CARGAR')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _loadingDemo = true);
+    String message;
+    try {
+      message = await seedDemoData();
+      if (message.startsWith('Datos demo')) {
+        // Refresca la app con los datos recién cargados.
+        final settings =
+            Provider.of<SettingsProvider>(context, listen: false);
+        await settings.loadSettings();
+        await Provider.of<CustomerProvider>(context, listen: false)
+            .loadCustomers();
+        await Provider.of<ProductProvider>(context, listen: false)
+            .loadProducts();
+        if (!mounted) return;
+        setState(() {
+          _future = Provider.of<CustomerProvider>(context, listen: false)
+              .getLoyaltyBoard();
+        });
+      }
+    } catch (e) {
+      message = 'No se pudieron cargar los datos: $e';
+    } finally {
+      if (mounted) setState(() => _loadingDemo = false);
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+
+    // Con datos recién cargados, publica todo (nombre, tarjetas y compras).
+    if (message.startsWith('Datos demo')) {
+      await _sync();
+    }
+  }
+
   Future<void> _logout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -168,6 +225,21 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
               const SizedBox(height: 20),
               _buildSyncCard(settings),
               const SizedBox(height: 28),
+              Center(
+                child: TextButton.icon(
+                  onPressed: _loadingDemo ? null : _loadDemoData,
+                  icon: const Icon(Icons.auto_awesome,
+                      size: 18, color: Color(0xFF6B7280)),
+                  label: const Text(
+                    'Cargar datos de demostración',
+                    style: TextStyle(
+                        color: Color(0xFF6B7280),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
               OutlinedButton.icon(
                 onPressed: _logout,
                 icon: const Icon(Icons.logout, color: Colors.redAccent),

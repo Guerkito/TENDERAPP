@@ -2,12 +2,19 @@
 // No forma parte del producto.
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
 import 'api/db_helper.dart';
 
-Future<void> seedDemoData() async {
+Future<String> seedDemoData() async {
   final db = await DBHelper().database;
+
+  // Solo siembra un dispositivo vacío: no pisa datos reales.
+  final count = await db.rawQuery('SELECT COUNT(*) n FROM products');
+  if (((count.first['n'] as num?) ?? 0) > 0) {
+    return 'Este dispositivo ya tiene productos registrados; no se cargó nada.';
+  }
 
   for (final entry in {
     'store_name': 'Licorera Punto de Encuentro',
@@ -18,9 +25,6 @@ Future<void> seedDemoData() async {
     await db.insert('settings', {'key': entry.key, 'value': entry.value},
         conflictAlgorithm: ConflictAlgorithm.replace);
   }
-
-  final count = await db.rawQuery('SELECT COUNT(*) n FROM products');
-  if (((count.first['n'] as num?) ?? 0) > 0) return;
 
   final rnd = Random(7);
 
@@ -333,9 +337,10 @@ Future<void> seedDemoData() async {
     });
   }
 
-  // ignore: avoid_print
-  print('SEED OK: ${productIds.length} productos · ${customerNames.length} '
-      'clientes · $saleCount ventas · ${expenses.length} gastos · '
-      '${suppliers.length} proveedores · ${purchases.length} compras '
-      '(producto 0: ${names.first})');
+  final summary =
+      'Datos demo cargados: ${productIds.length} productos · '
+      '${customerNames.length} clientes con tarjeta · $saleCount ventas · '
+      '${expenses.length} gastos · ${suppliers.length} proveedores.';
+  debugPrint('SEED OK: $summary');
+  return summary;
 }
