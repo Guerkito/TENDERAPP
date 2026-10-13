@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import '../api/supabase_service.dart';
 import '../constants/app_constants.dart';
 import '../models/customer_model.dart';
 import '../providers/customer_provider.dart';
 import '../providers/settings_provider.dart';
+import '../widgets/loyalty_widgets.dart';
+import '../constants/app_theme.dart';
 
 class ReceiptReviewScreen extends StatefulWidget {
   const ReceiptReviewScreen({super.key});
@@ -24,9 +24,7 @@ class _ReceiptReviewScreenState extends State<ReceiptReviewScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (SupabaseService.isLoggedIn) _load();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
   Future<void> _load() async {
@@ -37,7 +35,9 @@ class _ReceiptReviewScreenState extends State<ReceiptReviewScreen> {
     });
     try {
       final storeId = await SupabaseService.syncStore(
-          settings.storeId, settings.storeName);
+          settings.storeId, settings.storeName,
+          loyaltyGoal: settings.loyaltyGoal,
+          loyaltyReward: settings.loyaltyReward);
       if (storeId != settings.storeId) {
         await settings.updateStoreId(storeId);
       }
@@ -119,20 +119,39 @@ class _ReceiptReviewScreenState extends State<ReceiptReviewScreen> {
 
   Future<void> _approve(Map<String, dynamic> sub) async {
     try {
+      final customerProvider =
+          Provider.of<CustomerProvider>(context, listen: false);
+      final settings = Provider.of<SettingsProvider>(context, listen: false);
       final phone = _normalizePhone(sub['customer_phone'] as String?);
       var customer = await _findCustomer(phone);
       customer ??= await _askCreateCustomer(sub);
       if (customer == null) return;
       if (!mounted) return;
 
-      await Provider.of<CustomerProvider>(context, listen: false)
-          .addLoyaltyStamp(
+      await customerProvider.addLoyaltyStamp(
         customer.id!,
         note: 'Factura validada (web)',
         source: LoyaltySource.web,
       );
       await SupabaseService.reviewSubmission(sub['id'] as String,
           approved: true);
+
+      // Publica la tarjeta actualizada para que el cliente la vea en la web.
+      try {
+        final summary = await customerProvider.getLoyaltySummary(customer.id!);
+        await SupabaseService.syncCustomers(settings.storeId, [
+          {
+            'id': customer.id,
+            'name': customer.name,
+            'phone': customer.phone,
+            'stamps_total': summary.currentStamps,
+            'rewards_available': summary.rewardsAvailable,
+          }
+        ]);
+      } catch (e) {
+        debugPrint('ReceiptReview: no se pudo publicar la tarjeta: $e');
+      }
+
       if (!mounted) return;
       setState(() => _submissions.remove(sub));
       ScaffoldMessenger.of(context).showSnackBar(
@@ -165,120 +184,117 @@ class _ReceiptReviewScreenState extends State<ReceiptReviewScreen> {
 
   void _showQrDialog() {
     final settings = Provider.of<SettingsProvider>(context, listen: false);
-    final url = '${SupabaseService.webAppUrl}?store=${settings.storeId}';
-    final notConfigured = SupabaseService.webAppUrl.contains('TU-WEBAPP');
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('QR de Fidelización'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (notConfigured) ...[
-              const Text(
-                'Falta publicar la webapp y poner su URL en supabase_service.dart',
-                style: TextStyle(color: Colors.redAccent, fontSize: 12),
-              ),
-              const SizedBox(height: 12),
-            ],
-            QrImageView(data: url, size: 200),
-            const SizedBox(height: 12),
-            Text(url, style: const TextStyle(fontSize: 10), textAlign: TextAlign.center),
-            const SizedBox(height: 8),
-            const Text(
-              'Imprime este QR y ponlo en tu mostrador: tus clientes suben la factura desde el celular.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: url));
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('COPIAR ENLACE'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('CERRAR'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _logout() async {
-    await SupabaseService.signOut();
-    if (!mounted) return;
-    setState(() => _submissions = []);
+    showLoyaltyQrDialog(context, settings.storeId);
   }
 
   @override
   Widget build(BuildContext context) {
-    final loggedIn = SupabaseService.isLoggedIn;
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF3F7EA),
       appBar: AppBar(
-        title: const Text('Validar Facturas (Web)',
+        title: const Text('Facturas de Clientes',
             style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         actions: [
-          if (loggedIn) ...[
-            IconButton(
-              icon: const Icon(Icons.qr_code_2),
-              tooltip: 'QR para clientes',
-              onPressed: _showQrDialog,
-            ),
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Actualizar',
-              onPressed: _load,
-            ),
-            IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: 'Cerrar sesión',
-              onPressed: _logout,
-            ),
-          ],
+          IconButton(
+            icon: const Icon(Icons.qr_code_2),
+            tooltip: 'QR para clientes',
+            onPressed: _showQrDialog,
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Actualizar',
+            onPressed: _load,
+          ),
         ],
       ),
-      body: loggedIn
-          ? _buildReviewBody()
-          : _LoginPanel(onLoggedIn: _load),
+      body: _buildReviewBody(),
     );
   }
 
   Widget _buildReviewBody() {
     if (_loading) {
       return const Center(
-          child: CircularProgressIndicator(color: Color(0xFF00DF82)));
+          child: CircularProgressIndicator(color: Color(0xFF143122)));
     }
     if (_error != null) {
+      debugPrint('ReceiptReview: error al cargar: $_error');
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.cloud_off, size: 48, color: Colors.grey),
-              const SizedBox(height: 12),
-              Text('No se pudo conectar:\n$_error',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              const SizedBox(height: 12),
-              ElevatedButton(onPressed: _load, child: const Text('REINTENTAR')),
+              const Icon(Icons.cloud_off, size: 56, color: Color(0xFF6B7280)),
+              const SizedBox(height: 16),
+              const Text('No pudimos conectar con el servidor',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+              const Text(
+                'Revisa tu conexión a internet e inténtalo de nuevo.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: _load,
+                icon: const Icon(Icons.refresh),
+                label: const Text('REINTENTAR',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFC6F24E),
+                  foregroundColor: const Color(0xFF143122),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 12),
+                ),
+              ),
             ],
           ),
         ),
       );
     }
     if (_submissions.isEmpty) {
-      return const Center(
-        child: Text('No hay facturas pendientes por validar.'),
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppColors.limeSoft,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.inbox_outlined,
+                    color: Color(0xFF143122), size: 36),
+              ),
+              const SizedBox(height: 16),
+              const Text('No hay facturas pendientes',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+              const Text(
+                'Cuando un cliente suba la foto de su factura desde tu QR, aparecerá aquí para que la apruebes y le sumes su sello.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF6B7280), fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: _showQrDialog,
+                icon: const Icon(Icons.qr_code_2, size: 20),
+                label: const Text('MOSTRAR MI QR',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF143122),
+                  side: const BorderSide(
+                      color: Color(0xFFC6F24E), width: 1.5),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
     return RefreshIndicator(
@@ -356,8 +372,8 @@ class _ReceiptReviewScreenState extends State<ReceiptReviewScreen> {
                         icon: const Icon(Icons.check),
                         label: const Text('APROBAR'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00DF82),
-                          foregroundColor: const Color(0xFF1A3C2B),
+                          backgroundColor: const Color(0xFFC6F24E),
+                          foregroundColor: const Color(0xFF143122),
                         ),
                       ),
                     ),
@@ -372,113 +388,3 @@ class _ReceiptReviewScreenState extends State<ReceiptReviewScreen> {
   }
 }
 
-class _LoginPanel extends StatefulWidget {
-  final VoidCallback onLoggedIn;
-
-  const _LoginPanel({required this.onLoggedIn});
-
-  @override
-  State<_LoginPanel> createState() => _LoginPanelState();
-}
-
-class _LoginPanelState extends State<_LoginPanel> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _busy = false;
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _run(Future<void> Function() action) async {
-    setState(() => _busy = true);
-    try {
-      await action();
-      if (!mounted) return;
-      widget.onLoggedIn();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('$e')));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        const Icon(Icons.cloud_sync, size: 56, color: Color(0xFF1A3C2B)),
-        const SizedBox(height: 12),
-        const Text(
-          'Conecta tu tienda',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Inicia sesión para recibir las facturas que tus clientes suban desde la webapp de fidelización.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey, fontSize: 13),
-        ),
-        const SizedBox(height: 24),
-        TextField(
-          controller: _emailController,
-          keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(
-            labelText: 'Correo',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _passwordController,
-          obscureText: true,
-          decoration: const InputDecoration(
-            labelText: 'Contraseña',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: _busy
-              ? null
-              : () => _run(() => SupabaseService.signIn(
-                  _emailController.text, _passwordController.text)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF00DF82),
-            foregroundColor: const Color(0xFF1A3C2B),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-          ),
-          child: _busy
-              ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('INICIAR SESIÓN',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-        ),
-        const SizedBox(height: 8),
-        TextButton(
-          onPressed: _busy
-              ? null
-              : () => _run(() async {
-                    final active = await SupabaseService.signUp(
-                        _emailController.text, _passwordController.text);
-                    if (!active && mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text(
-                              'Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.')));
-                    }
-                  }),
-          child: const Text('CREAR CUENTA'),
-        ),
-      ],
-    );
-  }
-}

@@ -308,7 +308,7 @@ class _ImportProductsScreenState extends State<ImportProductsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF3F7EA),
       appBar: AppBar(
         title: const Text('Importar Productos',
             style: TextStyle(fontWeight: FontWeight.bold)),
@@ -321,7 +321,7 @@ class _ImportProductsScreenState extends State<ImportProductsScreen> {
   Widget _buildBody() {
     if (_parsing) {
       return const Center(
-          child: CircularProgressIndicator(color: Color(0xFF00DF82)));
+          child: CircularProgressIndicator(color: Color(0xFF143122)));
     }
 
     if (_error != null) {
@@ -352,7 +352,7 @@ class _ImportProductsScreenState extends State<ImportProductsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.upload_file, size: 64, color: Color(0xFF1A3C2B)),
+              const Icon(Icons.upload_file, size: 64, color: Color(0xFF143122)),
               const SizedBox(height: 16),
               const Text(
                 'Sube tu Excel de productos (.xlsx)',
@@ -364,7 +364,7 @@ class _ImportProductsScreenState extends State<ImportProductsScreen> {
                 'Nombre (obligatoria) · Precio Venta (obligatoria)\n'
                 'Código de Barras · Categoría · Precio Compra · Stock · Vencimiento · Unidad',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey, fontSize: 13),
+                style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
               ),
               const SizedBox(height: 20),
               ElevatedButton.icon(
@@ -372,8 +372,8 @@ class _ImportProductsScreenState extends State<ImportProductsScreen> {
                 icon: const Icon(Icons.folder_open),
                 label: const Text('ELEGIR ARCHIVO'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00DF82),
-                  foregroundColor: const Color(0xFF1A3C2B),
+                  backgroundColor: const Color(0xFFC6F24E),
+                  foregroundColor: const Color(0xFF143122),
                   padding: const EdgeInsets.symmetric(
                       horizontal: 24, vertical: 14),
                 ),
@@ -391,7 +391,7 @@ class _ImportProductsScreenState extends State<ImportProductsScreen> {
           color: Colors.white,
           child: Row(
             children: [
-              const Icon(Icons.description, color: Color(0xFF1A3C2B)),
+              const Icon(Icons.description, color: Color(0xFF143122)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -434,7 +434,7 @@ class _ImportProductsScreenState extends State<ImportProductsScreen> {
               final p = _products[index];
               return ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: const Color(0xFFF5F7FA),
+                  backgroundColor: const Color(0xFFF3F7EA),
                   child: Text('${index + 1}',
                       style: const TextStyle(fontSize: 12)),
                 ),
@@ -456,8 +456,8 @@ class _ImportProductsScreenState extends State<ImportProductsScreen> {
             child: ElevatedButton(
               onPressed: _importing ? null : _import,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00DF82),
-                foregroundColor: const Color(0xFF1A3C2B),
+                backgroundColor: const Color(0xFFC6F24E),
+                foregroundColor: const Color(0xFF143122),
               ),
               child: _importing
                   ? const SizedBox(

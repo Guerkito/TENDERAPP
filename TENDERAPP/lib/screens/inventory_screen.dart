@@ -38,7 +38,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final categories = ['Todos', ...productProvider.categories];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF3F7EA),
       appBar: AppBar(
         title: const Text('Inventario / Stock', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
@@ -74,7 +74,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       margin: const EdgeInsets.symmetric(horizontal: 6),
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF00DF82) : Colors.white,
+                        color: isSelected ? const Color(0xFFC6F24E) : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           if (!isSelected) BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
@@ -84,7 +84,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         child: Text(
                           cat,
                           style: TextStyle(
-                            color: isSelected ? const Color(0xFF1A3C2B) : Colors.grey[600],
+                            color: isSelected ? const Color(0xFF143122) : Colors.grey[600],
                             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                             fontSize: 13,
                           ),
@@ -161,7 +161,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           child: ListTile(
                             title: Text(product.name, style: Theme.of(context).textTheme.titleMedium),
                             subtitle: Text(
-                                'Precio: ${CurrencyFormatter.format(product.salePrice)} | Stock: ${product.stock}', 
+                                'Precio: ${CurrencyFormatter.format(product.salePrice)} | Stock: ${CurrencyFormatter.quantity(product.stock)}', 
                                 style: Theme.of(context).textTheme.bodySmall),
                             trailing: IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),

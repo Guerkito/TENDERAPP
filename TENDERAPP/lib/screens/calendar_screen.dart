@@ -79,8 +79,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00DF82),
-                  foregroundColor: const Color(0xFF1A3C2B),
+                  backgroundColor: const Color(0xFFC6F24E),
+                  foregroundColor: const Color(0xFF143122),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
                 child: const Text('AGENDAR VISITA', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -99,7 +99,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final selectedAppointments = appointments[DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day)] ?? [];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF3F7EA),
       appBar: AppBar(
         title: const Text('Agenda de Proveedores'),
         backgroundColor: Colors.white,
@@ -130,10 +130,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 return appointments[DateTime(day.year, day.month, day.day)] ?? [];
               },
               calendarStyle: const CalendarStyle(
-                todayDecoration: BoxDecoration(color: Color(0x3300DF82), shape: BoxShape.circle),
-                selectedDecoration: BoxDecoration(color: Color(0xFF00DF82), shape: BoxShape.circle),
-                selectedTextStyle: TextStyle(color: Color(0xFF1A3C2B), fontWeight: FontWeight.bold),
-                markerDecoration: BoxDecoration(color: Color(0xFF1A3C2B), shape: BoxShape.circle),
+                todayDecoration: BoxDecoration(color: Color(0x33C6F24E), shape: BoxShape.circle),
+                selectedDecoration: BoxDecoration(color: Color(0xFFC6F24E), shape: BoxShape.circle),
+                selectedTextStyle: TextStyle(color: Color(0xFF143122), fontWeight: FontWeight.bold),
+                markerDecoration: BoxDecoration(color: Color(0xFF143122), shape: BoxShape.circle),
               ),
               headerStyle: const HeaderStyle(
                 formatButtonVisible: false,
@@ -150,12 +150,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
               children: [
                 Text(
                   _selectedDay == null ? 'Selecciona un día' : DateFormat('EEEE, d MMMM', 'es_ES').format(_selectedDay!),
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A)),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F1D14)),
                 ),
                 IconButton.filledTonal(
                   onPressed: _showAddAppointmentDialog,
                   icon: const Icon(Icons.add),
-                  style: IconButton.styleFrom(backgroundColor: const Color(0xFF00DF82).withOpacity(0.2)),
+                  style: IconButton.styleFrom(backgroundColor: const Color(0xFFC6F24E).withOpacity(0.2)),
                 ),
               ],
             ),
@@ -181,8 +181,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         margin: const EdgeInsets.only(bottom: 12),
                         child: ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: const Color(0xFF1A3C2B).withOpacity(0.1),
-                            child: const Icon(Icons.local_shipping, color: Color(0xFF1A3C2B)),
+                            backgroundColor: const Color(0xFF143122).withOpacity(0.1),
+                            child: const Icon(Icons.local_shipping, color: Color(0xFF143122)),
                           ),
                           title: Text(appt['supplier_name'], style: const TextStyle(fontWeight: FontWeight.bold)),
                           subtitle: Text(appt['notes'] ?? 'Sin notas'),

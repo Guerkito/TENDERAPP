@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../constants/app_theme.dart';
 import 'package:intl/intl.dart';
 import '../providers/purchase_provider.dart';
 import '../providers/supplier_provider.dart';
@@ -45,7 +46,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
               child: InfoBanner(
                 text: 'Revisa aquí todas las compras de mercancía que has realizado. Mira cuánto has invertido en inventario.',
                 icon: Icons.history,
-                color: Colors.blueGrey,
+                color: AppColors.forest,
                 onClose: () => setState(() => _showTutorial = false),
               ),
             ),
@@ -57,7 +58,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                       children: [
                         Icon(Icons.history, size: 64, color: Colors.grey[300]),
                         const SizedBox(height: 16),
-                        const Text('No hay registros de compras.', style: TextStyle(color: Colors.grey)),
+                        const Text('No hay registros de compras.', style: TextStyle(color: Color(0xFF6B7280))),
                       ],
                     ),
                   )
@@ -77,8 +78,8 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         child: ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: Colors.blue[50],
-                            child: const Icon(Icons.local_shipping, color: Colors.blue),
+                            backgroundColor: AppColors.limeSoft,
+                            child: const Icon(Icons.local_shipping, color: AppColors.forest),
                           ),
                           title: Text(supplier.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                           subtitle: Text(DateFormat('dd/MM/yyyy - HH:mm').format(purchase.date)),
@@ -88,10 +89,10 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                             children: [
                               Text(
                                 CurrencyFormatter.format(purchase.totalAmount),
-                                style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.blue, fontSize: 16),
+                                style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.forest, fontSize: 16),
                               ),
                               if (purchase.notes != null && purchase.notes!.isNotEmpty)
-                                const Icon(Icons.note, size: 12, color: Colors.grey),
+                                const Icon(Icons.note, size: 12, color: Color(0xFF6B7280)),
                             ],
                           ),
                           onTap: () {
@@ -113,7 +114,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
         },
         label: const Text('Nueva Entrada'),
         icon: const Icon(Icons.add),
-        backgroundColor: Colors.blue,
+        backgroundColor: AppColors.lime, foregroundColor: AppColors.ink,
       ),
     );
   }

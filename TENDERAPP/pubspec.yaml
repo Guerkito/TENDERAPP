@@ -2,7 +2,7 @@ name: tenderapp
 description: A new Flutter project.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.0+2
+version: 1.0.0+3
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -42,6 +42,8 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^2.0.0
   flutter_launcher_icons: ^0.13.1
+  # Misma versión transitiva de sqflite_common_ffi; se usa solo en pruebas.
+  sqlite3: any
 
 flutter_launcher_icons:
   android: "launcher_icon"
@@ -53,3 +55,10 @@ flutter:
   uses-material-design: true
   assets:
     - assets/logo.jpg
+  fonts:
+    - family: Nunito
+      fonts:
+        - asset: assets/fonts/Nunito.ttf
+    - family: Anton
+      fonts:
+        - asset: assets/fonts/Anton-Regular.ttf

@@ -80,7 +80,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: const Color(0xFF143122),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -93,7 +93,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
           const SizedBox(height: 8),
           Text(
             CurrencyFormatter.format(total),
-            style: const TextStyle(color: Color(0xFF00DF82), fontSize: 32, fontWeight: FontWeight.w900),
+            style: const TextStyle(color: Color(0xFFC6F24E), fontSize: 32, fontWeight: FontWeight.w900),
           ),
         ],
       ),
@@ -153,7 +153,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
               CurrencyFormatter.format(customer.totalPendingBalance),
               style: TextStyle(fontWeight: FontWeight.w900, color: statusColor, fontSize: 16),
             ),
-            const Text('pendiente', style: TextStyle(fontSize: 10, color: Colors.grey)),
+            const Text('pendiente', style: TextStyle(fontSize: 10, color: Color(0xFF6B7280))),
           ],
         ),
       ),

@@ -132,7 +132,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF3F7EA),
       appBar: AppBar(
         title: Text(widget.product == null ? 'Nuevo Producto' : 'Editar Producto'),
         backgroundColor: Colors.white,
@@ -236,7 +236,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       IconButton.filled(
                         onPressed: _scanBarcode,
                         icon: const Icon(Icons.qr_code_scanner),
-                        style: IconButton.styleFrom(backgroundColor: const Color(0xFF1A3C2B)),
+                        style: IconButton.styleFrom(backgroundColor: const Color(0xFF143122)),
                       ),
                     ],
                   ),
@@ -314,8 +314,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   child: ElevatedButton(
                     onPressed: _saveProduct,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00DF82),
-                      foregroundColor: const Color(0xFF1A3C2B),
+                      backgroundColor: const Color(0xFFC6F24E),
+                      foregroundColor: const Color(0xFF143122),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                     child: Text(

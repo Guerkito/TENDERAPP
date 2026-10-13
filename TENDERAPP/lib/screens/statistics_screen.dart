@@ -188,7 +188,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                                       children: [
                                         TextSpan(
                                           text: CurrencyFormatter.format(spot.y),
-                                          style: const TextStyle(color: Color(0xFF00DF82), fontWeight: FontWeight.w900),
+                                          style: const TextStyle(color: Color(0xFF143122), fontWeight: FontWeight.w900),
                                         ),
                                       ],
                                     );
@@ -216,14 +216,14 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                                   interval: 5, 
                                   getTitlesWidget: (value, meta) {
                                     if (value < 1 || value > 31) return const SizedBox.shrink();
-                                    return Text(value.toInt().toString(), style: const TextStyle(color: Colors.grey, fontSize: 10));
+                                    return Text(value.toInt().toString(), style: const TextStyle(color: Color(0xFF6B7280), fontSize: 10));
                                   },
                                 ),
                               ),
                               leftTitles: AxisTitles(
                                 sideTitles: SideTitles(
                                   showTitles: true,
-                                  getTitlesWidget: (value, meta) => Text(compactNumber(value), style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                                  getTitlesWidget: (value, meta) => Text(compactNumber(value), style: const TextStyle(color: Color(0xFF6B7280), fontSize: 10)),
                                   reservedSize: 45,
                                 ),
                               ),
@@ -434,13 +434,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFF00DF82) : const Color(0xFFF5F7FA),
+                      color: isSelected ? const Color(0xFFC6F24E) : const Color(0xFFF3F7EA),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       _getMonthName(month, full: true),
                       style: TextStyle(
-                        color: isSelected ? const Color(0xFF1A3C2B) : Colors.grey[600],
+                        color: isSelected ? const Color(0xFF143122) : Colors.grey[600],
                         fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
                         fontSize: 13,
                       ),
@@ -461,17 +461,17 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A3C2B).withOpacity(0.05),
+          color: const Color(0xFF143122).withOpacity(0.05),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: const Color(0xFF1A3C2B)),
+            Icon(icon, size: 16, color: const Color(0xFF143122)),
             const SizedBox(width: 8),
             Text(
               label,
               style: const TextStyle(
-                color: Color(0xFF1A3C2B),
+                color: Color(0xFF143122),
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
               ),
@@ -557,13 +557,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       child: Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF00DF82) : const Color(0xFFF5F7FA),
+          color: isSelected ? const Color(0xFFC6F24E) : const Color(0xFFF3F7EA),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? const Color(0xFF1A3C2B) : Colors.black87,
+            color: isSelected ? const Color(0xFF143122) : Colors.black87,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -598,7 +598,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           const SizedBox(height: 6),
           FittedBox(
             fit: BoxFit.scaleDown,
-            child: Text(value, style: const TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.w900, fontSize: 26, letterSpacing: -1)),
+            child: Text(value, style: const TextStyle(color: Color(0xFF0F1D14), fontWeight: FontWeight.w900, fontSize: 26, letterSpacing: -1)),
           ),
         ],
       ),

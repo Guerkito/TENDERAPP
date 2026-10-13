@@ -3,22 +3,22 @@ import 'package:flutter/services.dart';
 
 class CurrencyFormatter {
   static String format(num value) {
-    // Formato estándar para pesos colombianos (COP)
-    final formatter = NumberFormat.currency(
-      locale: 'es_CO',
-      symbol: '\$ ',
-      decimalDigits: 0,
-    );
-    return formatter.format(value);
+    // Pesos colombianos: el símbolo va antes, con separador de miles.
+    final nf = NumberFormat('#,##0', 'es_CO');
+    final sign = value < 0 ? '-' : '';
+    return '$sign\$ ${nf.format(value.abs())}';
   }
 
   static String formatWithDecimals(num value) {
-    final formatter = NumberFormat.currency(
-      locale: 'es_CO',
-      symbol: '\$ ',
-      decimalDigits: 2,
-    );
-    return formatter.format(value);
+    final nf = NumberFormat('#,##0.00', 'es_CO');
+    final sign = value < 0 ? '-' : '';
+    return '$sign\$ ${nf.format(value.abs())}';
+  }
+
+  /// Cantidades: enteras sin decimales ("18"), fraccionarias tal cual ("0,5 kg").
+  static String quantity(num value) {
+    if (value % 1 == 0) return value.toInt().toString();
+    return value.toString();
   }
 
   /// Convierte un string con formato ("1.200.000") a un número puro (1200000)

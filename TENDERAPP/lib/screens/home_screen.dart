@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../api/supabase_service.dart';
+import '../constants/app_theme.dart';
 import '../providers/settings_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../widgets/business_type_picker.dart';
@@ -49,6 +51,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _initialize() async {
     final settings = Provider.of<SettingsProvider>(context, listen: false);
     await settings.loadSettings();
+
+    // Registra la tienda en el sistema de fidelización al iniciar sesión,
+    // para que el QR de los clientes funcione sin abrir otras pantallas.
+    if (SupabaseService.isLoggedIn) {
+      try {
+        final remoteId = await SupabaseService.syncStore(
+            settings.storeId, settings.storeName,
+            loyaltyGoal: settings.loyaltyGoal,
+            loyaltyReward: settings.loyaltyReward);
+        if (remoteId != settings.storeId) {
+          await settings.updateStoreId(remoteId);
+        }
+      } catch (e) {
+        debugPrint('HomeScreen: no se pudo sincronizar la tienda: $e');
+      }
+    }
 
     if (!settings.hasPinEnabled) {
       setState(() => _isUnlocked = true);
@@ -125,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: const Text('EMPEZAR',
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF00DF82))),
+                      color: Color(0xFF143122))),
             ),
           ],
         ),
@@ -148,105 +166,125 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Mostrar pantalla de carga mientras settings no está listo
     if (!settings.isLoaded) {
       return const Scaffold(
-        backgroundColor: Color(0xFF1A3C2B),
+        backgroundColor: Color(0xFF143122),
         body: Center(
-          child: CircularProgressIndicator(color: Color(0xFF00DF82)),
+          child: CircularProgressIndicator(color: Color(0xFFC6F24E)),
         ),
       );
     }
 
-    // Mostrar PIN si está activado y aún no desbloqueado
-    if (settings.hasPinEnabled && !_isUnlocked) {
-      return PinScreen(onSuccess: () => setState(() => _isUnlocked = true));
-    }
+    // El PIN se muestra como capa encima para no desmontar la app:
+    // así una venta a medio cobrar sobrevive a una interrupción.
+    final showPin = settings.hasPinEnabled && !_isUnlocked;
 
     final navProvider = Provider.of<NavigationProvider>(context);
 
-    return Scaffold(
-      body: IndexedStack(
-        index: navProvider.selectedIndex,
-        children: _widgetOptions,
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A3C2B),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: NavigationBarTheme(
-              data: NavigationBarThemeData(
-                backgroundColor: Colors.transparent,
-                indicatorColor: const Color(0xFF00DF82),
-                labelTextStyle: MaterialStateProperty.all(
-                  const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500),
-                ),
-                iconTheme: MaterialStateProperty.resolveWith((states) {
-                  if (states.contains(MaterialState.selected)) {
-                    return const IconThemeData(
-                        color: Color(0xFF1A3C2B), size: 24);
-                  }
-                  return const IconThemeData(color: Colors.white70, size: 24);
-                }),
-              ),
-              child: NavigationBar(
-                height: 64,
-                elevation: 0,
-                selectedIndex: navProvider.selectedIndex,
-                onDestinationSelected: (index) {
-                  navProvider.setIndex(index);
-                },
-                destinations: [
-                  _buildDestination(
-                    Icons.home_outlined,
-                    Icons.home,
-                    'Inicio',
-                  ),
-                  _buildDestination(
-                    Icons.shopping_bag_outlined,
-                    Icons.shopping_bag,
-                    'Caja',
-                  ),
-                  _buildDestination(
-                    Icons.inventory_2_outlined,
-                    Icons.inventory_2,
-                    'Stock',
-                  ),
-                  _buildDestination(
-                    Icons.people_outline,
-                    Icons.people,
-                    'Clientes',
-                  ),
-                  _buildDestination(
-                    Icons.more_horiz,
-                    Icons.more_horiz,
-                    'Más',
+    return Stack(
+      children: [
+        ExcludeSemantics(
+          excluding: showPin,
+          child: Scaffold(
+          body: IndexedStack(
+            index: navProvider.selectedIndex,
+            children: _widgetOptions,
+          ),
+          bottomNavigationBar: SafeArea(
+            minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.forest,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
+              child: Row(
+                children: List.generate(_navItems.length, (index) {
+                  final item = _navItems[index];
+                  final selected = index == navProvider.selectedIndex;
+                  return Expanded(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                      onTap: () => navProvider.setIndex(index),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOut,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: selected ? AppColors.lime : Colors.transparent,
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                selected ? item.selectedIcon : item.icon,
+                                size: 21,
+                                color:
+                                    selected ? AppColors.ink : Colors.white70,
+                              ),
+                              if (selected) ...[
+                                const SizedBox(width: 7),
+                                Text(
+                                  item.label,
+                                  style: const TextStyle(
+                                    color: AppColors.ink,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 12.5,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
             ),
           ),
+          ),
         ),
-      ),
+        if (showPin)
+          Positioned.fill(
+            child:
+                PinScreen(onSuccess: () => setState(() => _isUnlocked = true)),
+          ),
+      ],
     );
   }
 
-  NavigationDestination _buildDestination(
-      IconData icon, IconData selectedIcon, String label) {
-    return NavigationDestination(
-      icon: Icon(icon),
-      selectedIcon: Icon(selectedIcon),
-      label: label,
-    );
-  }
+  static const List<({IconData icon, IconData selectedIcon, String label})>
+      _navItems = [
+    (icon: Icons.home_outlined, selectedIcon: Icons.home_rounded, label: 'Inicio'),
+    (
+      icon: Icons.shopping_bag_outlined,
+      selectedIcon: Icons.shopping_bag_rounded,
+      label: 'Caja'
+    ),
+    (
+      icon: Icons.inventory_2_outlined,
+      selectedIcon: Icons.inventory_2_rounded,
+      label: 'Stock'
+    ),
+    (
+      icon: Icons.people_outline_rounded,
+      selectedIcon: Icons.people_rounded,
+      label: 'Clientes'
+    ),
+    (
+      icon: Icons.grid_view_rounded,
+      selectedIcon: Icons.grid_view_rounded,
+      label: 'Más'
+    ),
+  ];
 }

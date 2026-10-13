@@ -6,7 +6,9 @@ import '../models/customer_movement_model.dart';
 import '../providers/customer_provider.dart';
 import '../api/currency_formatter.dart';
 import '../constants/app_constants.dart';
+import '../constants/app_theme.dart';
 import 'add_customer_screen.dart';
+import 'customer_purchases_screen.dart';
 
 class CustomerDetailScreen extends StatefulWidget {
   final Customer customer;
@@ -35,6 +37,17 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       appBar: AppBar(
         title: Text(currentCustomer.name),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.receipt_long_outlined),
+            tooltip: 'Ver compras',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    CustomerPurchasesScreen(customer: currentCustomer),
+              ),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
@@ -91,7 +104,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
             CurrencyFormatter.format(customer.totalPendingBalance),
             style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w900, color: Colors.redAccent),
           ),
-          const Text('SALDO TOTAL PENDIENTE', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12)),
+          const Text('SALDO TOTAL PENDIENTE', style: TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.bold, fontSize: 12)),
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -109,7 +122,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   Widget _buildSmallInfo(String label, String value) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF6B7280), fontWeight: FontWeight.bold)),
         Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
       ],
     );
@@ -118,12 +131,17 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   Widget _buildMovementTile(CustomerMovement movement) {
     final isCargo = movement.type == MovementType.charge;
     return ListTile(
+      onTap: () => _showMovementActions(movement),
       leading: Icon(
         isCargo ? Icons.arrow_upward : Icons.arrow_downward,
         color: isCargo ? Colors.red : Colors.green,
       ),
       title: Text(movement.description),
-      subtitle: Text(movement.dateTime.split('T')[0]),
+      subtitle: Text(
+        '${movement.dateTime.split('T')[0]}\nToca para corregir o anular',
+        style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
+      ),
+      isThreeLine: true,
       trailing: Text(
         (isCargo ? '+ ' : '- ') + CurrencyFormatter.format(movement.amount),
         style: TextStyle(
@@ -132,6 +150,159 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _showMovementActions(CustomerMovement movement) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            Text(movement.description,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(
+              '${movement.type} de ${CurrencyFormatter.format(movement.amount)} · ${movement.dateTime.split('T')[0]}',
+              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              leading:
+                  const Icon(Icons.edit_outlined, color: Color(0xFF143122)),
+              title: const Text('Corregir monto'),
+              subtitle: const Text('Anula este movimiento y registra el correcto'),
+              onTap: () => Navigator.pop(sheetContext, 'correct'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.undo, color: Colors.redAccent),
+              title: const Text('Anular movimiento'),
+              subtitle:
+                  const Text('Crea el movimiento opuesto para cuadrar el saldo'),
+              onTap: () => Navigator.pop(sheetContext, 'annul'),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+
+    if (action == 'correct') {
+      await _showCorrectionDialog(movement);
+    } else if (action == 'annul') {
+      await _confirmAnnul(movement);
+    }
+  }
+
+  Future<void> _showCorrectionDialog(CustomerMovement movement) async {
+    final amountController = TextEditingController();
+    final reasonController = TextEditingController();
+    final newAmount = await showDialog<double>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Corregir monto'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Monto actual: ${CurrencyFormatter.format(movement.amount)}\nQuedará anulado en el historial y se registrará el monto correcto.',
+              style: const TextStyle(fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: amountController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [ThousandSeparatorInputFormatter()],
+              autofocus: true,
+              decoration: const InputDecoration(
+                  labelText: 'Monto correcto', prefixText: '\$ '),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                  labelText: 'Motivo (opcional)',
+                  hintText: 'Ej: se digito mal el monto'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('CANCELAR')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(
+                  dialogContext, CurrencyFormatter.parse(amountController.text)),
+              child: const Text('CORREGIR')),
+        ],
+      ),
+    );
+    if (!mounted || newAmount == null) return;
+
+    if (newAmount <= 0 || newAmount == movement.amount) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'Escribe un monto distinto y mayor que cero para corregir.')));
+      return;
+    }
+
+    try {
+      await Provider.of<CustomerProvider>(context, listen: false)
+          .correctMovement(movement,
+              correctedAmount: newAmount, reason: reasonController.text);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Saldo corregido. Revisa el historial.')));
+      _refreshHistory();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('No se pudo corregir. Inténtalo de nuevo.')));
+    }
+  }
+
+  Future<void> _confirmAnnul(CustomerMovement movement) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('¿Anular movimiento?'),
+        content: Text(
+            'Se registrará el movimiento opuesto por ${CurrencyFormatter.format(movement.amount)} y el saldo del cliente quedará cuadrado. La anulación queda visible en el historial.',
+            style: const TextStyle(fontSize: 13, height: 1.4)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('CANCELAR')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('ANULAR'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await Provider.of<CustomerProvider>(context, listen: false)
+          .correctMovement(movement);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Movimiento anulado. Saldo actualizado.')));
+      _refreshHistory();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('No se pudo anular. Inténtalo de nuevo.')));
+    }
   }
 
   Widget _buildActionButtons(BuildContext context, Customer customer, VoidCallback onAbonoRegistered) {
@@ -158,7 +329,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
             icon: const Icon(Icons.card_giftcard, color: Colors.white),
             tooltip: 'Canjear Puntos',
             style: IconButton.styleFrom(
-              backgroundColor: Colors.purple,
+              backgroundColor: AppColors.forest,
               padding: const EdgeInsets.all(15),
             ),
           ),
@@ -166,6 +337,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           IconButton(
             onPressed: () => _sendWhatsApp(customer),
             icon: const Icon(Icons.chat, color: Colors.white),
+            tooltip: 'Enviar WhatsApp',
             style: IconButton.styleFrom(
               backgroundColor: const Color(0xFF25D366),
               padding: const EdgeInsets.all(15),
@@ -177,7 +349,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   }
 
   void _sendWhatsApp(Customer customer) async {
-    if (customer.phone.isEmpty) return;
+    if (customer.phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Este cliente no tiene celular registrado.')));
+      return;
+    }
     
     final message = "Hola ${customer.name}, te saludo de la tienda. Te recuerdo que tu saldo pendiente es de ${CurrencyFormatter.format(customer.totalPendingBalance)}. ¡Gracias!";
     final url = "https://wa.me/${customer.phone}?text=${Uri.encodeComponent(message)}";
@@ -199,7 +375,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           return AlertDialog(
             title: Row(
               children: [
-                const Icon(Icons.stars, color: Colors.purple),
+                const Icon(Icons.stars, color: AppColors.forest),
                 const SizedBox(width: 10),
                 const Text('Canjear Puntos'),
               ],
@@ -230,19 +406,19 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.purple[50],
+                      color: AppColors.limeSoft,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('VALOR EN DINERO:', style: TextStyle(fontSize: 12, color: Colors.purple, fontWeight: FontWeight.bold)),
-                        Text(CurrencyFormatter.format(cashValue), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.purple)),
+                        const Text('VALOR EN DINERO:', style: TextStyle(fontSize: 12, color: AppColors.forest, fontWeight: FontWeight.bold)),
+                        Text(CurrencyFormatter.format(cashValue), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.forest)),
                       ],
                     ),
                   ),
                   const SizedBox(height: 5),
-                  const Text('* Este valor se descontará de la deuda actual.', style: TextStyle(fontSize: 10, fontStyle: FontStyle.italic, color: Colors.grey)),
+                  const Text('* Este valor se descontará de la deuda actual.', style: TextStyle(fontSize: 10, fontStyle: FontStyle.italic, color: Color(0xFF6B7280))),
                 ],
               ],
             ),
@@ -266,7 +442,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     );
                   }
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.purple, foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.forest, foregroundColor: Colors.white),
                 child: const Text('CONFIRMAR CANJE'),
               ),
             ],

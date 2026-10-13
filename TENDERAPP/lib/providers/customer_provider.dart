@@ -38,10 +38,63 @@ class CustomerProvider with ChangeNotifier {
       await txn.insert('customer_movements', movement.toMap());
 
       // 2. Actualizar el saldo del cliente
-      final adjustment = movement.type == MovementType.charge ? movement.amount : -movement.amount;
+      final adjustment =
+          CustomerMovement.signedDelta(movement.type, movement.amount);
       await txn.rawUpdate(
         'UPDATE customers SET total_pending_balance = total_pending_balance + ? WHERE id = ?',
         [adjustment, movement.customerId]
+      );
+    });
+    await loadCustomers();
+  }
+
+  /// Corrige un movimiento ya registrado, sin borrar historia:
+  /// inserta el movimiento opuesto (anulación) y, si se da [correctedAmount],
+  /// registra el movimiento corregido. Todo en una transacción.
+  Future<void> correctMovement(
+    CustomerMovement original, {
+    double? correctedAmount,
+    String? reason,
+  }) async {
+    final db = await DBHelper().database;
+    final motivo =
+        (reason == null || reason.trim().isEmpty) ? '' : ' · ${reason.trim()}';
+    final opposite = original.type == MovementType.charge
+        ? MovementType.payment
+        : MovementType.charge;
+
+    await db.transaction((txn) async {
+      await txn.insert(
+        'customer_movements',
+        CustomerMovement(
+          customerId: original.customerId,
+          dateTime: DateTime.now().toIso8601String(),
+          type: opposite,
+          amount: original.amount,
+          description: 'Anula: ${original.description}$motivo',
+        ).toMap(),
+      );
+      var delta =
+          -CustomerMovement.signedDelta(original.type, original.amount);
+
+      if (correctedAmount != null && correctedAmount > 0) {
+        await txn.insert(
+          'customer_movements',
+          CustomerMovement(
+            customerId: original.customerId,
+            dateTime: DateTime.now().toIso8601String(),
+            type: original.type,
+            amount: correctedAmount,
+            description: 'Corrige: ${original.description}$motivo',
+          ).toMap(),
+        );
+        delta +=
+            CustomerMovement.signedDelta(original.type, correctedAmount);
+      }
+
+      await txn.rawUpdate(
+        'UPDATE customers SET total_pending_balance = total_pending_balance + ? WHERE id = ?',
+        [delta, original.customerId]
       );
     });
     await loadCustomers();

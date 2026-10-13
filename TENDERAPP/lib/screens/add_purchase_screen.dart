@@ -8,6 +8,7 @@ import '../providers/purchase_provider.dart';
 import '../models/supplier_model.dart';
 import '../models/product_model.dart';
 import '../api/currency_formatter.dart';
+import '../constants/app_theme.dart';
 
 class AddPurchaseScreen extends StatefulWidget {
   const AddPurchaseScreen({super.key});
@@ -218,18 +219,18 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
             margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.blue[50],
+              color: AppColors.limeSoft,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue[100]!),
+              border: Border.all(color: Color(0xFFD6EE9E)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                const Icon(Icons.info_outline, color: AppColors.forest, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Registra aquí lo que te trajo el proveedor. El inventario y el costo de compra se actualizarán automáticamente al finalizar.',
-                    style: TextStyle(color: Colors.blue[800], fontSize: 13, fontWeight: FontWeight.w500),
+                    style: TextStyle(color: AppColors.forest, fontSize: 13, fontWeight: FontWeight.w500),
                   ),
                 ),
               ],
@@ -246,6 +247,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                 child: Column(
                   children: [
                     DropdownButtonFormField<int>(
+                      isExpanded: true,
                       decoration: const InputDecoration(labelText: 'Proveedor / Repartidor', prefixIcon: Icon(Icons.local_shipping)),
                       value: _selectedSupplierId,
                       items: suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
@@ -254,7 +256,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        const Icon(Icons.calendar_today, size: 20, color: Colors.grey),
+                        const Icon(Icons.calendar_today, size: 20, color: Color(0xFF6B7280)),
                         const SizedBox(width: 10),
                         Expanded(child: Text('Fecha factura: ${DateFormat('dd/MM/yyyy').format(_selectedDate)}', style: const TextStyle(fontWeight: FontWeight.bold))),
                         TextButton(
@@ -274,19 +276,25 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
           
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20.0),
-            child: Row(children: [Text('PRODUCTOS RECIBIDOS', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12))]),
+            child: Row(children: [Text('PRODUCTOS RECIBIDOS', style: TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.bold, fontSize: 12))]),
           ),
           
           Expanded(
             child: _purchaseItems.isEmpty
-                ? Center(child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey[300]),
-                      const SizedBox(height: 16),
-                      const Text('No has agregado productos aún', style: TextStyle(color: Colors.grey)),
-                    ],
-                  ))
+                ? Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.inventory_2_outlined,
+                              size: 64, color: Colors.grey[300]),
+                          const SizedBox(height: 16),
+                          const Text('No has agregado productos aún',
+                              style: TextStyle(color: Color(0xFF6B7280))),
+                        ],
+                      ),
+                    ))
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: _purchaseItems.length,
@@ -301,7 +309,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(CurrencyFormatter.format(item['quantity'] * item['cost']), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                              Text(CurrencyFormatter.format(item['quantity'] * item['cost']), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.forest)),
                               IconButton(icon: const Icon(Icons.delete, color: Colors.red, size: 20), onPressed: () => setState(() => _purchaseItems.removeAt(i))),
                             ],
                           ),
@@ -311,8 +319,9 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                   ),
           ),
           
-          // Footer
-          Container(
+        ],
+      ),
+      bottomNavigationBar: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -323,8 +332,18 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('TOTAL FACTURA', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                    Text(CurrencyFormatter.format(_totalAmount), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.blue)),
+                    const Text('TOTAL FACTURA', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6B7280))),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(CurrencyFormatter.format(_totalAmount),
+                            style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.forest)),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 15),
@@ -333,29 +352,28 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                   height: 55,
                   child: ElevatedButton(
                     onPressed: _savePurchase,
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                    child: const Text('FINALIZAR ENTRADA', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.lime, foregroundColor: AppColors.ink, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                    child: const Text('FINALIZAR ENTRADA', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.ink)),
                   ),
                 ),
               ],
             ),
-          ),
-        ],
       ),
+
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           FloatingActionButton(
             onPressed: _scanBarcode,
             heroTag: 'purchase_scan',
-            backgroundColor: Colors.blue,
+            backgroundColor: AppColors.lime, foregroundColor: AppColors.ink,
             child: const Icon(Icons.qr_code_scanner, color: Colors.white),
           ),
           const SizedBox(height: 12),
           FloatingActionButton(
             onPressed: _showProductSearch,
             heroTag: 'purchase_search',
-            backgroundColor: Colors.blue,
+            backgroundColor: AppColors.lime, foregroundColor: AppColors.ink,
             child: const Icon(Icons.search, color: Colors.white),
           ),
         ],

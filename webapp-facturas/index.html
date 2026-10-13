@@ -3,60 +3,193 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Facturas de Fidelización</title>
+<meta name="theme-color" content="#1A3C2B">
+<title>Mi tarjeta de fidelización</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-  body { background: #F5F7FA; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; }
-  .card { background: #fff; border-radius: 24px; padding: 28px 22px; width: 100%; max-width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,.06); }
-  .store { background: #1A3C2B; color: #fff; border-radius: 20px; padding: 18px 20px; width: 100%; max-width: 420px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
-  .store .dot { width: 40px; height: 40px; border-radius: 50%; background: rgba(0, 223, 130, .15); display: flex; align-items: center; justify-content: center; font-size: 20px; }
-  .store h1 { font-size: 17px; font-weight: 800; }
-  .store p { font-size: 12px; color: rgba(255,255,255,.7); }
-  h2 { font-size: 19px; color: #1A1A1A; margin-bottom: 6px; }
-  .sub { font-size: 13px; color: #8A8A8A; margin-bottom: 20px; }
-  label { display: block; font-size: 13px; font-weight: 700; color: #1A1A1A; margin-bottom: 6px; margin-top: 14px; }
-  input[type=tel], input[type=text] { width: 100%; padding: 13px 14px; border: 1.5px solid #E3E6EA; border-radius: 14px; font-size: 15px; outline: none; }
-  input:focus { border-color: #00DF82; }
-  input[type=file] { width: 100%; font-size: 13px; padding: 10px; border: 1.5px dashed #C9CFD6; border-radius: 14px; background: #FAFBFC; }
-  button { width: 100%; padding: 15px; margin-top: 20px; background: #00DF82; color: #1A3C2B; font-size: 16px; font-weight: 800; border: none; border-radius: 16px; cursor: pointer; }
-  button:disabled { opacity: .5; }
-  .msg { margin-top: 14px; font-size: 13px; padding: 12px; border-radius: 12px; display: none; }
-  .msg.err { display: block; background: #FFECEC; color: #C0392B; }
+  :root {
+    --forest: #143122;
+    --neon: #C6F24E;
+    --neon-soft: rgba(198, 242, 78, .20);
+    --cream: #F3F7EA;
+    --ink: #1A1A1A;
+    --muted: #5F6B63;
+    --line: #E3E6EA;
+    --red: #C0392B;
+    --amber: #B26A00;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--cream);
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 24px 16px 40px;
+    font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--ink);
+  }
+  .wrap { width: 100%; max-width: 440px; }
+  .store {
+    background: var(--forest); color: #fff; border-radius: 22px;
+    padding: 16px 18px; display: flex; align-items: center; gap: 12px;
+    margin-bottom: 16px;
+  }
+  .store .dot {
+    width: 44px; height: 44px; border-radius: 50%; background: var(--neon-soft);
+    display: flex; align-items: center; justify-content: center; flex: none;
+  }
+  .store .dot svg { width: 24px; height: 24px; }
+  .store h1 { font-family: 'Anton', 'Nunito', sans-serif; font-size: 17px; font-weight: 400; letter-spacing: .4px; text-transform: uppercase; line-height: 1.2; }
+  .store p { font-size: 12px; color: #9BE8C6; font-weight: 700; }
+  .card {
+    background: #fff; border-radius: 24px; padding: 22px 20px; margin-bottom: 16px;
+  }
+  h2 { font-family: 'Anton', 'Nunito', sans-serif; font-size: 20px; font-weight: 400; letter-spacing: .3px; margin-bottom: 8px; }
+  .sub { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+  label { display: block; font-size: 13px; font-weight: 800; margin: 16px 0 6px; }
+  input[type=tel], input[type=text] {
+    width: 100%; padding: 14px; border: 1.5px solid var(--line); border-radius: 14px;
+    font-size: 16px; font-family: inherit; outline: none; background: #FAFBFC;
+  }
+  input:focus { border-color: var(--neon); }
+  input[type=file] {
+    width: 100%; font-size: 13.5px; padding: 12px; border: 1.5px dashed #C9CFD6;
+    border-radius: 14px; background: #FAFBFC; font-family: inherit;
+  }
+  button {
+    width: 100%; padding: 15px; border: none; border-radius: 16px;
+    font-size: 15px; font-weight: 800; font-family: inherit; cursor: pointer;
+    background: var(--neon); color: var(--forest); min-height: 48px;
+  }
+  button.secondary {
+    background: #fff; color: var(--forest); border: 1.5px solid var(--neon);
+  }
+  button.ghost {
+    background: transparent; color: var(--muted); font-size: 13.5px;
+    text-decoration: underline; min-height: 44px; padding: 10px;
+  }
+  button:disabled { opacity: .55; cursor: default; }
+  .row { display: flex; gap: 10px; }
+  .row button { flex: 1; }
+  .stamps { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 6px; }
+  .stamp {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 2px solid #DCE2E8; background: #EFF2F5;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stamp.on { background: var(--neon); border-color: #A9D63F; }
+  .stamp svg { width: 16px; height: 16px; }
+  .prize {
+    background: var(--forest); color: #fff; border-radius: 18px;
+    padding: 14px 16px; margin-top: 16px; font-size: 13.5px; line-height: 1.4;
+  }
+  .prize b { color: var(--neon); }
+  .reward {
+    background: var(--neon); color: var(--forest); border-radius: 18px;
+    padding: 14px 16px; margin-top: 12px; font-weight: 800; font-size: 14.5px;
+  }
+  .msg {
+    display: none; margin-top: 14px; font-size: 13.5px; padding: 12px 14px;
+    border-radius: 14px; line-height: 1.4;
+  }
+  .msg.err { display: block; background: #FFECEC; color: var(--red); }
   .msg.ok { display: block; background: #E7FBF1; color: #0B7A4B; }
+  .msg.info { display: block; background: #FFF6E5; color: var(--amber); }
+  .subs { list-style: none; margin-top: 12px; }
+  .subs li {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px;
+    color: var(--muted);
+  }
+  .chip {
+    font-size: 11.5px; font-weight: 800; padding: 4px 10px; border-radius: 20px;
+  }
+  .chip.pending { background: #FFF6E5; color: var(--amber); }
+  .chip.approved { background: #E7FBF1; color: #0B7A4B; }
+  .chip.rejected { background: #FFECEC; color: var(--red); }
   .center { text-align: center; }
-  .big { font-size: 52px; margin-bottom: 12px; }
-  .hint { font-size: 12px; color: #8A8A8A; margin-top: 10px; }
+  .big-icon {
+    width: 84px; height: 84px; border-radius: 50%; background: var(--neon-soft);
+    display: flex; align-items: center; justify-content: center; margin: 6px auto 16px;
+  }
+  .big-icon svg { width: 40px; height: 40px; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.4; }
+  .footer { margin-top: 20px; font-size: 11.5px; color: #9AA3AC; text-align: center; }
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<div class="store" id="storeBox" style="display:none">
-  <div class="dot">🏪</div>
-  <div>
-    <h1 id="storeName">...</h1>
-    <p>Tarjeta de fidelización</p>
+  <div class="store" id="storeBox" style="display:none">
+    <div class="dot">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#143122" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M5 12v8h14v-8"/></svg>
+    </div>
+    <div>
+      <h1 id="storeName">…</h1>
+      <p>Tarjeta de fidelización</p>
+    </div>
   </div>
-</div>
 
-<div class="card" id="card">
-  <div class="center big">📸</div>
-  <h2 class="center">Sube tu factura</h2>
-  <p class="sub center">Cada factura aprobada suma un sello en tu tarjeta.</p>
+  <div class="card" id="card">
+    <div class="big-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#143122" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/><path d="M6 15h4"/></svg>
+    </div>
+    <h2 class="center">Tu tarjeta digital</h2>
+    <p class="sub center">Escribe tu número de celular para ver tus sellos, tu premio y el estado de tus facturas.</p>
 
-  <form id="form">
-    <label for="phone">Tu número de celular</label>
-    <input type="tel" id="phone" placeholder="300 123 4567" inputmode="numeric" required>
+    <form id="phoneForm">
+      <label for="phone">Tu número de celular</label>
+      <input type="tel" id="phone" placeholder="300 123 4567" inputmode="numeric" autocomplete="tel" required>
+      <div style="height:14px"></div>
+      <button type="submit" id="phoneBtn">VER MI TARJETA</button>
+    </form>
+    <div class="msg" id="phoneMsg" role="status" aria-live="polite"></div>
+  </div>
 
-    <label for="name">Tu nombre (opcional)</label>
-    <input type="text" id="name" placeholder="Ej: María Pérez">
+  <div class="card" id="myCard" style="display:none">
+    <h2 id="hello">Hola</h2>
+    <p class="sub" id="stampsText">—</p>
+    <div class="stamps" id="stamps" aria-hidden="true"></div>
+    <div class="prize" id="prizeBox"></div>
+    <div class="reward" id="rewardBox" style="display:none"></div>
+    <p class="hint" id="updatedAt"></p>
 
-    <label for="photo">Foto de la factura</label>
-    <input type="file" id="photo" accept="image/*" capture="environment" required>
+    <div class="row" style="margin-top:18px">
+      <button type="button" class="secondary" id="refreshBtn">ACTUALIZAR</button>
+      <button type="button" id="uploadBtn">SUBIR FACTURA</button>
+    </div>
+    <button type="button" class="ghost" id="changePhoneBtn">No soy yo, cambiar número</button>
+  </div>
 
-    <button type="submit" id="btn">ENVIAR FACTURA</button>
-    <div class="msg" id="msg"></div>
-    <p class="hint center">La tienda revisará tu factura y te sumará el sello.</p>
-  </form>
+  <div class="card" id="subsCard" style="display:none">
+    <h2 style="font-size:17px">Tus últimas facturas</h2>
+    <p class="sub">La tienda revisa cada factura y te suma un sello al aprobarla.</p>
+    <ul class="subs" id="subsList"></ul>
+  </div>
+
+  <div class="card" id="purchasesCard" style="display:none">
+    <h2 style="font-size:17px">Tus compras</h2>
+    <p class="sub">Lo que has comprado a tu nombre en la tienda.</p>
+    <ul class="subs" id="purchasesList"></ul>
+  </div>
+
+  <div class="card" id="uploadCard" style="display:none">
+    <h2>Sube tu factura</h2>
+    <p class="sub">Toma o elige una foto clara de tu factura de compra.</p>
+    <form id="uploadForm">
+      <label for="name">Tu nombre (opcional)</label>
+      <input type="text" id="name" placeholder="Ej: María Pérez">
+      <label for="photo">Foto de la factura</label>
+      <input type="file" id="photo" accept="image/*" capture="environment" required>
+      <div style="height:14px"></div>
+      <button type="submit" id="uploadSubmit">ENVIAR FACTURA</button>
+      <button type="button" class="ghost" id="cancelUpload">Cancelar</button>
+    </form>
+    <div class="msg" id="uploadMsg" role="status" aria-live="polite"></div>
+  </div>
+
+  <p class="footer">Hecho con TenderApp · Tu tienda revisa cada factura</p>
 </div>
 
 <script type="module">
@@ -67,60 +200,319 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const storeId = new URLSearchParams(location.search).get('store');
-const card = document.getElementById('card');
-const msg = document.getElementById('msg');
-const form = document.getElementById('form');
-const btn = document.getElementById('btn');
+const PHONE_KEY = 'tenderapp_loyalty_phone';
 
-function showError(text) {
-  card.innerHTML = '<div class="center big">😕</div><h2 class="center">No disponible</h2><p class="sub center">' + text + '</p>';
+const $ = (id) => document.getElementById(id);
+const storeBox = $('storeBox'), card = $('card'), myCard = $('myCard'),
+      subsCard = $('subsCard'), uploadCard = $('uploadCard'),
+      purchasesCard = $('purchasesCard');
+
+const digits = (v) => (v || '').replace(/\D/g, '');
+const savePhone = (v) => localStorage.setItem(PHONE_KEY, digits(v));
+const savedPhone = () => digits(localStorage.getItem(PHONE_KEY) || '');
+
+function showMsg(node, text, kind) {
+  node.textContent = text;
+  node.className = 'msg ' + kind;
+}
+function clearMsg(node) { node.className = 'msg'; node.textContent = ''; }
+
+function fatal(icon, title, text) {
+  card.innerHTML = '';
+  const holder = document.createElement('div');
+  holder.className = 'center';
+  const iconBox = document.createElement('div');
+  iconBox.className = 'big-icon';
+  iconBox.innerHTML = icon;
+  const h = document.createElement('h2'); h.textContent = title;
+  const p = document.createElement('p'); p.className = 'sub'; p.textContent = text;
+  holder.append(iconBox, h, p);
+  card.appendChild(holder);
+  card.style.display = 'block';
 }
 
-if (!storeId) {
-  showError('Escanea el código QR que está en el mostrador de la tienda.');
-} else {
-  const { data: storeName } = await supabase.rpc('store_name', { p_id: storeId });
-  if (!storeName) {
-    showError('Tienda no encontrada. Pide el QR actualizado en el mostrador.');
+const ICON_WAIT = '<svg viewBox="0 0 24 24" fill="none" stroke="#143122" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="#143122" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+
+const STATUS = {
+  pending: ['En revisión', 'pending'],
+  approved: ['Aprobada', 'approved'],
+  rejected: ['Rechazada', 'rejected'],
+};
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return new Intl.DateTimeFormat('es-CO', {
+    day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit'
+  }).format(d);
+}
+
+function renderStamps(stamps, goal) {
+  const box = $('stamps');
+  box.innerHTML = '';
+  const filled = Math.max(0, Math.min(stamps || 0, goal || 0));
+  for (let i = 0; i < goal; i++) {
+    const el = document.createElement('div');
+    el.className = 'stamp' + (i < filled ? ' on' : '');
+    if (i < filled) el.innerHTML = ICON_CHECK;
+    box.appendChild(el);
+  }
+}
+
+function renderCard(data) {
+  if (!data) return;
+  $('storeName').textContent = data.store_name || 'Tu tienda';
+  storeBox.style.display = 'flex';
+
+  const phone = savedPhone();
+  const goal = data.goal || 6;
+  const stamps = data.stamps || 0;
+
+  if (!data.name && data.stamps === null) {
+    // La tienda existe pero este número aún no tiene tarjeta.
+    card.style.display = 'block';
+    card.innerHTML = '';
+    const holder = document.createElement('div');
+    holder.className = 'center';
+    const iconBox = document.createElement('div');
+    iconBox.className = 'big-icon';
+    iconBox.innerHTML = ICON_WAIT;
+    const h = document.createElement('h2'); h.textContent = 'Aún no tienes tarjeta';
+    const p = document.createElement('p'); p.className = 'sub';
+    p.textContent = 'Sube tu primera factura de compra en ' + (data.store_name || 'la tienda') + ' y empieza a ganar sellos.';
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.textContent = 'SUBIR MI PRIMERA FACTURA';
+    btn.style.marginTop = '18px';
+    btn.addEventListener('click', openUpload);
+    holder.append(iconBox, h, p, btn);
+    card.appendChild(holder);
+    return;
+  }
+
+  card.style.display = 'none';
+  myCard.style.display = 'block';
+  subsCard.style.display = 'block';
+
+  $('hello').textContent = data.name ? 'Hola, ' + data.name : 'Tu tarjeta';
+  $('stampsText').textContent = stamps + ' de ' + goal + ' sellos';
+  renderStamps(stamps, goal);
+  $('prizeBox').innerHTML = '';
+  const prizeText = document.createElement('span');
+  prizeText.append('Junta ');
+  const b1 = document.createElement('b'); b1.textContent = goal + ' sellos';
+  prizeText.append(b1, ' y gana: ');
+  const b2 = document.createElement('b'); b2.textContent = data.reward || 'un premio';
+  prizeText.append(b2);
+  $('prizeBox').appendChild(prizeText);
+
+  const rewards = data.rewards_available || 0;
+  const rewardBox = $('rewardBox');
+  if (rewards > 0) {
+    rewardBox.style.display = 'block';
+    rewardBox.textContent = rewards === 1
+      ? '¡Ganaste 1 premio! Muéstralo en caja para reclamarlo.'
+      : '¡Ganaste ' + rewards + ' premios! Muéstralos en caja para reclamarlos.';
   } else {
-    document.getElementById('storeName').textContent = storeName;
-    document.getElementById('storeBox').style.display = 'flex';
+    rewardBox.style.display = 'none';
   }
+
+  const updated = formatDate(data.updated_at);
+  $('updatedAt').textContent = updated
+    ? 'Actualizada: ' + updated + ' · toca ACTUALIZAR si acabas de recibir un sello.'
+    : '';
+
+  loadSubmissions();
+  loadPurchases();
 }
 
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  msg.className = 'msg';
-  const phone = document.getElementById('phone').value.replace(/\D/g, '');
-  const name = document.getElementById('name').value.trim();
-  const photo = document.getElementById('photo').files[0];
-
-  if (phone.length < 7) { msg.textContent = 'Escribe un número de celular válido.'; msg.className = 'msg err'; return; }
-  if (!photo) { msg.textContent = 'Toma o elige la foto de tu factura.'; msg.className = 'msg err'; return; }
-  if (photo.size > 10 * 1024 * 1024) { msg.textContent = 'La foto es muy grande (máx 10 MB).'; msg.className = 'msg err'; return; }
-
-  btn.disabled = true;
-  btn.textContent = 'ENVIANDO...';
-  try {
-    const ext = (photo.name.split('.').pop() || 'jpg').toLowerCase();
-    const path = `${storeId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error: upErr } = await supabase.storage.from('invoices').upload(path, photo, { contentType: photo.type || 'image/jpeg' });
-    if (upErr) throw upErr;
-    const { error: dbErr } = await supabase.from('receipt_submissions').insert({
-      store_id: storeId,
-      customer_phone: phone,
-      customer_name: name || null,
-      photo_path: path,
-    });
-    if (dbErr) throw dbErr;
-    card.innerHTML = '<div class="center big">✅</div><h2 class="center">¡Factura enviada!</h2><p class="sub center">La tienda la revisará y sumará el sello a tu tarjeta. ¡Gracias!</p>';
-  } catch (err) {
-    msg.textContent = 'No se pudo enviar: ' + (err.message || err);
-    msg.className = 'msg err';
-    btn.disabled = false;
-    btn.textContent = 'ENVIAR FACTURA';
+async function loadPurchases() {
+  const phone = savedPhone();
+  if (!phone || phone.length < 7) return;
+  const { data, error } = await supabase.rpc('my_purchases', {
+    p_store: storeId, p_phone: phone,
+  });
+  if (error || !Array.isArray(data) || data.length === 0) {
+    purchasesCard.style.display = 'none';
+    return;
   }
-});
+  const list = $('purchasesList');
+  list.innerHTML = '';
+  for (const purchase of data) {
+    const li = document.createElement('li');
+    const when = document.createElement('span');
+    when.textContent = formatDate(purchase.sold_at) || '—';
+    const right = document.createElement('span');
+    const method = document.createElement('em');
+    method.style.cssText = 'font-style:normal;font-size:11.5px;color:#5F6B63;margin-right:8px;';
+    method.textContent = purchase.payment_method || '';
+    const amount = document.createElement('b');
+    amount.textContent = '$ ' + Number(purchase.total || 0).toLocaleString('es-CO');
+    right.append(method, amount);
+    li.append(when, right);
+    list.appendChild(li);
+  }
+  purchasesCard.style.display = 'block';
+}
+
+async function loadSubmissions() {
+  const phone = savedPhone();
+  if (!phone || phone.length < 7) return;
+  const { data, error } = await supabase.rpc('my_submissions', {
+    p_store: storeId, p_phone: phone,
+  });
+  if (error || !Array.isArray(data) || data.length === 0) {
+    subsCard.style.display = 'none';
+    return;
+  }
+  const list = $('subsList');
+  list.innerHTML = '';
+  for (const sub of data) {
+    const li = document.createElement('li');
+    const when = document.createElement('span');
+    when.textContent = formatDate(sub.submitted_at) || '—';
+    const [label, cls] = STATUS[sub.status] || ['En revisión', 'pending'];
+    const chip = document.createElement('span');
+    chip.className = 'chip ' + cls;
+    chip.textContent = label;
+    li.append(when, chip);
+    list.appendChild(li);
+  }
+  subsCard.style.display = 'block';
+}
+
+async function loadCard() {
+  const phone = savedPhone();
+  if (!phone || phone.length < 7) return;
+  const { data, error } = await supabase.rpc('customer_card', {
+    p_store: storeId, p_phone: phone,
+  });
+  if (error) {
+    showMsg($('phoneMsg'), 'No pudimos cargar tu tarjeta. Revisa tu internet.', 'err');
+    card.style.display = 'block';
+    return;
+  }
+  if (!data) { // tienda no encontrada
+    fatal(ICON_WAIT, 'Tienda no encontrada', 'Pide el QR actualizado en el mostrador de la tienda.');
+    return;
+  }
+  renderCard(data);
+}
+
+function openUpload() {
+  uploadCard.style.display = 'block';
+  uploadCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function init() {
+  if (!storeId) {
+    fatal(ICON_WAIT, 'Escanea el QR de la tienda',
+      'Esta página se abre escaneando el código QR que está en el mostrador de tu tienda.');
+    return;
+  }
+
+  (async () => {
+    const { data: storeName } = await supabase.rpc('store_name', { p_id: storeId });
+    if (!storeName) {
+      fatal(ICON_WAIT, 'Tienda no encontrada',
+        'Pide el QR actualizado en el mostrador de la tienda.');
+      return;
+    }
+    $('storeName').textContent = storeName;
+    storeBox.style.display = 'flex';
+
+    const phone = savedPhone();
+    if (phone.length >= 7) {
+      $('phone').value = phone;
+      await loadCard();
+    }
+  })();
+
+  $('phoneForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearMsg($('phoneMsg'));
+    const value = digits($('phone').value);
+    if (value.length < 7) {
+      showMsg($('phoneMsg'), 'Escribe un número de celular válido.', 'err');
+      return;
+    }
+    const btn = $('phoneBtn');
+    btn.disabled = true; btn.textContent = 'BUSCANDO...';
+    try {
+      savePhone(value);
+      await loadCard();
+    } finally {
+      btn.disabled = false; btn.textContent = 'VER MI TARJETA';
+    }
+  });
+
+  $('refreshBtn').addEventListener('click', loadCard);
+  $('uploadBtn').addEventListener('click', openUpload);
+  $('cancelUpload').addEventListener('click', () => {
+    uploadCard.style.display = 'none';
+  });
+  $('changePhoneBtn').addEventListener('click', () => {
+    localStorage.removeItem(PHONE_KEY);
+    myCard.style.display = 'none';
+    subsCard.style.display = 'none';
+    uploadCard.style.display = 'none';
+    card.style.display = 'block';
+    $('phone').value = '';
+    $('phone').focus();
+  });
+
+  $('uploadForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearMsg($('uploadMsg'));
+    const phone = savedPhone();
+    const name = $('name').value.trim();
+    const photo = $('photo').files[0];
+    const btn = $('uploadSubmit');
+
+    if (phone.length < 7) {
+      showMsg($('uploadMsg'), 'Primero escribe tu número de celular.', 'err');
+      return;
+    }
+    if (!photo) {
+      showMsg($('uploadMsg'), 'Toma o elige la foto de tu factura.', 'err');
+      return;
+    }
+    if (photo.size > 10 * 1024 * 1024) {
+      showMsg($('uploadMsg'), 'La foto es muy grande (máx 10 MB). Toma una más liviana.', 'err');
+      return;
+    }
+
+    btn.disabled = true; btn.textContent = 'ENVIANDO...';
+    try {
+      const ext = (photo.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `${storeId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('invoices')
+        .upload(path, photo, { contentType: photo.type || 'image/jpeg' });
+      if (upErr) throw upErr;
+      const { error: dbErr } = await supabase.from('receipt_submissions').insert({
+        store_id: storeId,
+        customer_phone: phone,
+        customer_name: name || null,
+        photo_path: path,
+      });
+      if (dbErr) throw dbErr;
+
+      $('uploadForm').reset();
+      showMsg($('uploadMsg'),
+        '¡Factura enviada! La tienda la revisará y te sumará el sello. Toca ACTUALIZAR en tu tarjeta para verlo.',
+        'ok');
+      await loadSubmissions();
+    } catch (err) {
+      showMsg($('uploadMsg'), 'No se pudo enviar: ' + (err.message || err), 'err');
+    } finally {
+      btn.disabled = false; btn.textContent = 'ENVIAR FACTURA';
+    }
+  });
+}
+
+init();
 </script>
 </body>
 </html>

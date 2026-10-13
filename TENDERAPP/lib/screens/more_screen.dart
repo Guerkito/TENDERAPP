@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import '../providers/settings_provider.dart';
 import '../constants/business_types.dart';
 import '../widgets/business_type_picker.dart';
+import '../api/supabase_service.dart';
 import 'import_products_screen.dart';
 import 'loyalty_screen.dart';
 import 'receipt_review_screen.dart';
@@ -15,7 +16,10 @@ import 'alerts_screen.dart';
 import 'sales_history_screen.dart';
 import 'cash_register_screen.dart';
 import 'pin_screen.dart';
+import 'purchases_screen.dart';
+import 'store_profile_screen.dart';
 import '../api/backup_service.dart';
+import '../constants/app_theme.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -44,7 +48,7 @@ class MoreScreen extends StatelessWidget {
         builder: (context) => AlertDialog(
           title: const Text('¿Restaurar Datos?'),
           content: const Text(
-              'Esto reemplazará todos tus datos actuales con los del archivo seleccionado. Esta acción no se puede deshacer.\n\nLa aplicación se cerrará después de restaurar.'),
+              'Esto reemplazará tus datos actuales con los del archivo seleccionado.\n\nAntes de reemplazar, guardaremos una copia de tus datos actuales por si algo sale mal.'),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(context, false),
@@ -60,15 +64,16 @@ class MoreScreen extends StatelessWidget {
       );
       if (confirm == true && context.mounted) {
         try {
-          await BackupService.importDatabase(result.files.single.path!);
+          final summary =
+              await BackupService.importDatabase(result.files.single.path!);
           if (context.mounted) {
             showDialog(
               context: context,
               barrierDismissible: false,
               builder: (context) => AlertDialog(
-                title: const Text('Restauración Completada'),
-                content: const Text(
-                    'Los datos se han restaurado con éxito. Por favor, reinicia la aplicación para ver los cambios.'),
+                title: const Text('Restauración completada'),
+                content: Text(
+                    '$summary\n\nCierra y vuelve a abrir la aplicación para ver tus datos restaurados.'),
                 actions: [
                   ElevatedButton(
                       onPressed: () => Navigator.pop(context),
@@ -79,8 +84,21 @@ class MoreScreen extends StatelessWidget {
           }
         } catch (e) {
           if (context.mounted) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text('Error al restaurar: $e')));
+            final message = e is BackupException
+                ? e.message
+                : 'No se pudo restaurar la copia. Tus datos actuales siguen en su lugar.';
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('No se pudo restaurar'),
+                content: Text(message),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('ENTENDIDO')),
+                ],
+              ),
+            );
           }
         }
       }
@@ -152,7 +170,7 @@ class MoreScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
             ListTile(
-              leading: const Icon(Icons.edit, color: Colors.blue),
+              leading: const Icon(Icons.edit, color: AppColors.forest),
               title: const Text('Cambiar PIN'),
               onTap: () => Navigator.pop(ctx, 'change'),
             ),
@@ -219,7 +237,7 @@ class MoreScreen extends StatelessWidget {
     final settings = Provider.of<SettingsProvider>(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF3F7EA),
       appBar: AppBar(
         title: const Text('Más Opciones',
             style: TextStyle(fontWeight: FontWeight.bold)),
@@ -234,7 +252,6 @@ class MoreScreen extends StatelessWidget {
               'Tipo de Negocio',
               '${businessTypeById(settings.businessType).label} — toca para cambiar',
               Icons.storefront,
-              const Color(0xFF00DF82),
               () => _showBusinessTypeDialog(context, settings),
             ),
             _buildMenuItem(
@@ -242,16 +259,22 @@ class MoreScreen extends StatelessWidget {
               'Proveedores',
               'Gestiona tus contactos de compra',
               Icons.local_shipping,
-              const Color(0xFF1A3C2B),
               () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const SuppliersScreen())),
+            ),
+            _buildMenuItem(
+              context,
+              'Historial de Entradas',
+              'Compras a proveedores y costos',
+              Icons.shopping_cart_checkout,
+              () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const PurchasesScreen())),
             ),
             _buildMenuItem(
               context,
               'Calendario de Visitas',
               'Agenda citas con proveedores',
               Icons.calendar_month,
-              Colors.blue,
               () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const CalendarScreen())),
             ),
@@ -260,7 +283,6 @@ class MoreScreen extends StatelessWidget {
               'Importar Productos (Excel)',
               'Carga tu catálogo desde un archivo .xlsx',
               Icons.upload_file,
-              Colors.teal,
               () => Navigator.push(context,
                   MaterialPageRoute(
                       builder: (_) => const ImportProductsScreen())),
@@ -273,19 +295,30 @@ class MoreScreen extends StatelessWidget {
               'Tarjetas de Fidelización',
               'Sellos y premios de tus clientes',
               Icons.card_giftcard,
-              Colors.purple,
               () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const LoyaltyScreen())),
             ),
             _buildMenuItem(
               context,
-              'Validar Facturas (Web)',
-              'Aprueba las facturas que suben tus clientes',
-              Icons.cloud_sync,
-              const Color(0xFF007AFF),
+              'Facturas de Clientes',
+              'Aprueba las fotos y suma sellos',
+              Icons.fact_check_outlined,
               () => Navigator.push(context,
                   MaterialPageRoute(
                       builder: (_) => const ReceiptReviewScreen())),
+            ),
+          ]),
+          const SizedBox(height: 24),
+          _buildMenuSection('Cuenta', [
+            _buildMenuItem(
+              context,
+              'Mi Cuenta',
+              SupabaseService.currentEmail ?? 'Conectado',
+              Icons.account_circle_outlined,
+              () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const StoreProfileScreen())),
             ),
           ]),
           const SizedBox(height: 24),
@@ -295,7 +328,6 @@ class MoreScreen extends StatelessWidget {
               'Historial de Ventas',
               'Registro detallado de transacciones',
               Icons.history,
-              Colors.orange,
               () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -306,7 +338,6 @@ class MoreScreen extends StatelessWidget {
               'Historial de Gastos',
               'Consulta tus egresos pasados',
               Icons.receipt_long,
-              Colors.redAccent,
               () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const ExpensesScreen())),
             ),
@@ -315,7 +346,6 @@ class MoreScreen extends StatelessWidget {
               'Estadísticas Detalladas',
               'Reportes y gráficas de venta',
               Icons.bar_chart,
-              const Color(0xFF00DF82),
               () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -326,7 +356,6 @@ class MoreScreen extends StatelessWidget {
               'Alertas de Stock',
               'Productos que requieren atención',
               Icons.notifications,
-              Colors.deepOrange,
               () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const AlertsScreen())),
             ),
@@ -335,7 +364,6 @@ class MoreScreen extends StatelessWidget {
               'Cierre de Caja',
               'Arqueo y resumen del día',
               Icons.attach_money,
-              const Color(0xFFFF9500),
               () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -349,15 +377,14 @@ class MoreScreen extends StatelessWidget {
               'PIN de Seguridad',
               settings.hasPinEnabled ? 'Activado — toca para cambiar' : 'Desactivado — toca para activar',
               Icons.lock_outline,
-              settings.hasPinEnabled ? Colors.green : Colors.grey,
               () => _handlePinSettings(context),
+              accent: settings.hasPinEnabled ? Colors.green : Colors.grey,
             ),
             _buildMenuItem(
               context,
               'Copia de Seguridad',
               'Exportar tus datos para respaldo',
               Icons.backup_outlined,
-              Colors.blueGrey,
               () => _handleBackup(context),
             ),
             _buildMenuItem(
@@ -365,8 +392,8 @@ class MoreScreen extends StatelessWidget {
               'Restaurar Datos',
               'Importar una copia anterior',
               Icons.settings_backup_restore_rounded,
-              Colors.indigo,
               () => _handleRestore(context),
+              accent: Colors.redAccent,
             ),
           ]),
           const SizedBox(height: 40),
@@ -374,7 +401,7 @@ class MoreScreen extends StatelessWidget {
             child: Text(
               'TenderApp v10 - Gestión Total',
               style: TextStyle(
-                  color: Colors.grey,
+                  color: Color(0xFF6B7280),
                   fontSize: 12,
                   fontWeight: FontWeight.bold),
             ),
@@ -395,7 +422,7 @@ class MoreScreen extends StatelessWidget {
             style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey,
+                color: Color(0xFF6B7280),
                 letterSpacing: 1.2),
           ),
         ),
@@ -417,24 +444,28 @@ class MoreScreen extends StatelessWidget {
   }
 
   Widget _buildMenuItem(BuildContext context, String title, String subtitle,
-      IconData icon, Color color, VoidCallback onTap) {
+      IconData icon, VoidCallback onTap, {Color? accent}) {
+    // Tratamiento de marca por defecto: icono verde bosque sobre fondo neón
+    // suave. `accent` se reserva para estado (PIN) o peligro (Restaurar).
+    final tint = accent ?? const Color(0xFFC6F24E);
+    final iconColor = accent ?? const Color(0xFF143122);
     return ListTile(
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: accent == null ? AppColors.limeSoft : tint.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(16)),
-        child: Icon(icon, color: color, size: 24),
+        child: Icon(icon, color: iconColor, size: 24),
       ),
       title: Text(title,
           style:
               const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
       subtitle: Text(subtitle,
-          style: const TextStyle(color: Colors.grey, fontSize: 13)),
+          style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
       trailing:
-          const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+          const Icon(Icons.chevron_right, color: Color(0xFF6B7280), size: 20),
       onTap: onTap,
     );
   }

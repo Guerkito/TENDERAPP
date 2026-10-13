@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../constants/app_theme.dart';
 import '../constants/business_types.dart';
 
 class BusinessTypePicker extends StatelessWidget {
@@ -25,12 +27,12 @@ class BusinessTypePicker extends StatelessWidget {
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: selected
-                    ? const Color(0xFF00DF82).withOpacity(0.12)
+                    ? AppColors.limeSoft
                     : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: selected
-                      ? const Color(0xFF00DF82)
+                      ? const Color(0xFFC6F24E)
                       : Colors.grey.shade300,
                   width: selected ? 2 : 1,
                 ),
@@ -40,7 +42,7 @@ class BusinessTypePicker extends StatelessWidget {
                   Icon(
                     type.icon,
                     color: selected
-                        ? const Color(0xFF1A3C2B)
+                        ? const Color(0xFF143122)
                         : Colors.grey[600],
                   ),
                   const SizedBox(width: 12),
@@ -66,7 +68,7 @@ class BusinessTypePicker extends StatelessWidget {
                     ),
                   ),
                   if (selected)
-                    const Icon(Icons.check_circle, color: Color(0xFF00DF82)),
+                    const Icon(Icons.check_circle, color: Color(0xFF143122)),
                 ],
               ),
             ),

@@ -22,6 +22,20 @@ class DBHelper {
     return _database!;
   }
 
+  /// Cierra la conexión y la deja lista para reabrirse.
+  /// Se usa al restaurar una copia de seguridad.
+  static Future<void> closeAndReset() async {
+    final db = _database;
+    _database = null;
+    if (db != null) {
+      try {
+        await db.close();
+      } catch (e) {
+        debugPrint('DBHelper: error al cerrar la base: $e');
+      }
+    }
+  }
+
   Future<Database> _initDB() async {
     try {
       String path;

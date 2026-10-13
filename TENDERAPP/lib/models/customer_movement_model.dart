@@ -1,3 +1,5 @@
+import '../constants/app_constants.dart';
+
 class CustomerMovement {
   int? id;
   int customerId;
@@ -16,6 +18,10 @@ class CustomerMovement {
     required this.description,
     this.saleId,
   });
+
+  /// Efecto del movimiento sobre el saldo pendiente: Cargo suma, Abono resta.
+  static double signedDelta(String type, double amount) =>
+      type == MovementType.charge ? amount : -amount;
 
   Map<String, dynamic> toMap() {
     return {

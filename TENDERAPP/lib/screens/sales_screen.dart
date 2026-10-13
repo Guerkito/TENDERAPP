@@ -4,6 +4,7 @@ import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../constants/app_constants.dart';
+import '../constants/app_theme.dart';
 import '../models/product_model.dart';
 import '../providers/product_provider.dart';
 import '../providers/sale_provider.dart';
@@ -14,6 +15,7 @@ import '../models/sale_model.dart';
 import '../api/currency_formatter.dart';
 import '../api/pdf_generator.dart';
 import '../providers/statistics_provider.dart';
+import '../widgets/customer_type_sheet.dart';
 class SalesScreen extends StatefulWidget {
   const SalesScreen({super.key});
 
@@ -218,9 +220,9 @@ class _SalesScreenState extends State<SalesScreen> {
                               const EdgeInsets.symmetric(vertical: 8),
                           leading: CircleAvatar(
                             backgroundColor:
-                                const Color(0xFF00DF82).withOpacity(0.1),
+                                AppColors.limeSoft,
                             child: const Icon(Icons.inventory_2,
-                                color: Color(0xFF1A3C2B)),
+                                color: Color(0xFF143122)),
                           ),
                           title: Text(product.name,
                               style:
@@ -228,7 +230,7 @@ class _SalesScreenState extends State<SalesScreen> {
                           subtitle: Text(
                               'Stock: ${product.stock} | ${CurrencyFormatter.format(product.salePrice)}'),
                           trailing:
-                              const Icon(Icons.add_circle, color: Color(0xFF00DF82)),
+                              const Icon(Icons.add_circle, color: Color(0xFF143122)),
                           onTap: () async {
                             if (product.stock > 0) {
                               if (product.productType == 'fruver') {
@@ -335,6 +337,17 @@ class _SalesScreenState extends State<SalesScreen> {
       return;
     }
 
+    // Paso rápido: ¿la venta suma puntos a un cliente registrado?
+    if (_selectedCustomer == null) {
+      final type = await showCustomerTypeSheet(context);
+      if (type == null || !mounted) return; // canceló el cobro
+      if (type == CustomerType.registered) {
+        final customer = await _showCustomerSelectionBottomSheet();
+        if (customer == null || !mounted) return; // no eligió cliente
+        setState(() => _selectedCustomer = customer);
+      }
+    }
+
     final List<Map<String, dynamic>>? payments = await _showPaymentSheet();
     if (payments == null || payments.isEmpty) return;
 
@@ -384,6 +397,8 @@ class _SalesScreenState extends State<SalesScreen> {
             final allocated =
                 amounts.values.fold(0.0, (a, b) => a + b);
             final remaining = total - allocated;
+            // Sube el contenido cuando el teclado tapa el botón de confirmar.
+            final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
             return Container(
               height: MediaQuery.of(context).size.height * 0.85,
@@ -392,7 +407,7 @@ class _SalesScreenState extends State<SalesScreen> {
                 borderRadius:
                     BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              padding: EdgeInsets.fromLTRB(24, 16, 24, 24 + bottomInset),
               child: Column(
                 children: [
                   Container(
@@ -411,7 +426,7 @@ class _SalesScreenState extends State<SalesScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Total a cobrar:',
-                          style: TextStyle(color: Colors.grey)),
+                          style: TextStyle(color: Color(0xFF6B7280))),
                       Text(CurrencyFormatter.format(total),
                           style: const TextStyle(
                               fontWeight: FontWeight.w900,
@@ -424,7 +439,7 @@ class _SalesScreenState extends State<SalesScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Por cobrar:',
-                          style: TextStyle(color: Colors.grey)),
+                          style: TextStyle(color: Color(0xFF6B7280))),
                       Text(
                         CurrencyFormatter.format(
                             remaining.clamp(0, double.infinity)),
@@ -462,7 +477,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                         fontWeight: FontWeight.bold)),
                                 trailing: Switch(
                                   value: isSelected,
-                                  activeColor: const Color(0xFF00DF82),
+                                  activeColor: const Color(0xFFC6F24E),
                                   onChanged: (val) => setS(() {
                                     if (val) {
                                       amounts[method] = 0.0;
@@ -529,8 +544,8 @@ class _SalesScreenState extends State<SalesScreen> {
                             }
                           : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00DF82),
-                        foregroundColor: const Color(0xFF1A3C2B),
+                        backgroundColor: const Color(0xFFC6F24E),
+                        foregroundColor: const Color(0xFF143122),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16)),
                       ),
@@ -628,7 +643,7 @@ class _SalesScreenState extends State<SalesScreen> {
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w900,
-                              color: change >= 0 ? Colors.blue : Colors.red,
+                              color: change >= 0 ? Color(0xFF143122) : Colors.red,
                             ),
                           ),
                         ],
@@ -687,8 +702,9 @@ class _SalesScreenState extends State<SalesScreen> {
       );
 
       if (mounted) {
-        Provider.of<StatisticsProvider>(context, listen: false)
-            .loadStatistics();
+        final now = DateTime.now();
+        Provider.of<StatisticsProvider>(context, listen: false).loadStatistics(
+            year: now.year, month: now.month, day: now.day);
       }
 
       setState(() {
@@ -721,7 +737,7 @@ class _SalesScreenState extends State<SalesScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Icon(Icons.check_circle,
-            color: Color(0xFF00DF82), size: 60),
+            color: Color(0xFF143122), size: 60),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -902,7 +918,7 @@ class _SalesScreenState extends State<SalesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF3F7EA),
       appBar: AppBar(
         title: const Text('Caja / POS',
             style: TextStyle(fontWeight: FontWeight.bold)),
@@ -925,29 +941,68 @@ class _SalesScreenState extends State<SalesScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            if (_selectedCustomer != null)
-              Container(
-                color: const Color(0xFF00DF82).withOpacity(0.1),
+            // Estado del cliente de la venta: registrado o sin asignar.
+            InkWell(
+              onTap: () async {
+                final customer = await _showCustomerSelectionBottomSheet();
+                if (customer != null) {
+                  setState(() => _selectedCustomer = customer);
+                }
+              },
+              child: Container(
+                color: _selectedCustomer != null
+                    ? AppColors.limeSoft
+                    : Colors.transparent,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 child: Row(
                   children: [
-                    const Icon(Icons.person,
-                        color: Color(0xFF1A3C2B), size: 18),
-                    const SizedBox(width: 8),
-                    Text('Cliente: ${_selectedCustomer!.name}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A3C2B))),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 18),
-                      onPressed: () =>
-                          setState(() => _selectedCustomer = null),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _selectedCustomer != null
+                            ? const Color(0xFF143122)
+                            : const Color(0xFF143122).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        _selectedCustomer != null
+                            ? 'CLIENTE REGISTRADO'
+                            : 'CLIENTE',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.4,
+                          color: _selectedCustomer != null
+                              ? const Color(0xFFC6F24E)
+                              : const Color(0xFF143122),
+                        ),
+                      ),
                     ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _selectedCustomer?.name ??
+                            'Se define al cobrar · toca para asignar',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            color: Color(0xFF143122)),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (_selectedCustomer != null)
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        tooltip: 'Quitar cliente',
+                        onPressed: () =>
+                            setState(() => _selectedCustomer = null),
+                      ),
                   ],
                 ),
               ),
+            ),
             // Barra de búsqueda
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 15, 20, 10),
@@ -994,9 +1049,9 @@ class _SalesScreenState extends State<SalesScreen> {
                           return ListTile(
                             leading: CircleAvatar(
                               backgroundColor:
-                                  const Color(0xFF00DF82).withOpacity(0.1),
+                                  AppColors.limeSoft,
                               child: const Icon(Icons.inventory_2,
-                                  color: Color(0xFF1A3C2B), size: 16),
+                                  color: Color(0xFF143122), size: 16),
                             ),
                             title: Text(p.name,
                                 style: const TextStyle(
@@ -1006,7 +1061,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                 'Stock: ${p.stock} | ${CurrencyFormatter.format(p.salePrice)}',
                                 style: const TextStyle(fontSize: 12)),
                             trailing: const Icon(Icons.add_circle,
-                                color: Color(0xFF00DF82)),
+                                color: Color(0xFF143122)),
                             onTap: () {
                               if (p.stock > 0) {
                                 if (p.productType == 'fruver') {
@@ -1034,23 +1089,48 @@ class _SalesScreenState extends State<SalesScreen> {
             Expanded(
               child: _cart.isEmpty
                   ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                              Icons.shopping_cart_outlined,
-                              size: 100,
-                              color: Colors.grey[300]),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                          Container(
+                            padding: const EdgeInsets.all(28),
+                            decoration: BoxDecoration(
+                              color: AppColors.limeSoft,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.shopping_basket_outlined,
+                                size: 56, color: Color(0xFF143122)),
+                          ),
                           const SizedBox(height: 20),
                           const Text('Tu carrito está vacío',
                               style: TextStyle(
-                                  color: Colors.grey, fontSize: 16)),
-                          const SizedBox(height: 20),
-                          ElevatedButton(
-                            onPressed: _showProductSelectionDialog,
-                            child: const Text('AGREGAR PRODUCTOS'),
+                                  fontWeight: FontWeight.w800, fontSize: 17)),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Busca un producto arriba, escanéalo\no tócalo en la lista para empezar la venta.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: Color(0xFF6B7280),
+                                fontSize: 13,
+                                height: 1.4),
                           ),
-                        ],
+                          const SizedBox(height: 20),
+                          ElevatedButton.icon(
+                            onPressed: _showProductSelectionDialog,
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('AGREGAR PRODUCTOS',
+                                style: TextStyle(fontWeight: FontWeight.w800)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFC6F24E),
+                              foregroundColor: const Color(0xFF143122),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 14),
+                            ),
+                          ),
+                          ],
+                        ),
                       ))
                   : ListView.builder(
                       padding: const EdgeInsets.all(20),
@@ -1090,7 +1170,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                             CurrencyFormatter.format(
                                                 product.salePrice),
                                             style: const TextStyle(
-                                                color: Colors.grey,
+                                                color: Color(0xFF6B7280),
                                                 fontSize: 12,
                                                 decoration: TextDecoration
                                                     .lineThrough),
@@ -1108,7 +1188,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                           Text(
                                             '${CurrencyFormatter.format(product.salePrice)} c/u',
                                             style: const TextStyle(
-                                                color: Colors.grey,
+                                                color: Color(0xFF6B7280),
                                                 fontSize: 13),
                                           ),
                                         const SizedBox(width: 8),
@@ -1142,7 +1222,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                           fontSize: 18)),
                                   IconButton(
                                     icon: const Icon(Icons.add_circle,
-                                        color: Color(0xFF00DF82)),
+                                        color: Color(0xFF143122)),
                                     onPressed: () =>
                                         _addProductToCart(product),
                                   ),
@@ -1178,12 +1258,18 @@ class _SalesScreenState extends State<SalesScreen> {
                               color: Color(0xFF8A8A8A),
                               fontWeight: FontWeight.bold,
                               fontSize: 14)),
-                      Text(
-                        CurrencyFormatter.format(_totalAmount),
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 32,
-                            color: Color(0xFF1A1A1A)),
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            CurrencyFormatter.format(_totalAmount),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 32,
+                                color: Color(0xFF0F1D14)),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -1194,8 +1280,8 @@ class _SalesScreenState extends State<SalesScreen> {
                     child: ElevatedButton(
                       onPressed: _checkout,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00DF82),
-                        foregroundColor: const Color(0xFF1A3C2B),
+                        backgroundColor: const Color(0xFFC6F24E),
+                        foregroundColor: const Color(0xFF143122),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16)),
                         elevation: 0,
@@ -1216,7 +1302,7 @@ class _SalesScreenState extends State<SalesScreen> {
           : FloatingActionButton(
               heroTag: 'sales_fab',
               onPressed: _showProductSelectionDialog,
-              backgroundColor: const Color(0xFF1A3C2B),
+              backgroundColor: const Color(0xFF143122),
               child: const Icon(Icons.add, color: Colors.white),
             ),
     );

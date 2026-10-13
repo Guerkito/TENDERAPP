@@ -15,6 +15,35 @@ class SaleProvider with ChangeNotifier {
 
   /// Registra una venta con uno o varios métodos de pago.
   /// [payments] es una lista de {method: String, amount: double}.
+  /// Compras registradas a nombre de un cliente (para verlas desde su tarjeta).
+  Future<List<Map<String, dynamic>>> getCustomerSales(int customerId) async {
+    final db = await DBHelper().database;
+    return db.query(
+      'sales',
+      where: 'customer_id = ? AND status = ?',
+      whereArgs: [customerId, SaleStatus.completed],
+      orderBy: 'sale_date DESC',
+      limit: 50,
+    );
+  }
+
+  /// Ventas recientes con cliente asignado (para publicar a la nube).
+  Future<List<Map<String, dynamic>>> getRecentSalesWithCustomers(
+      {int limit = 120}) async {
+    final db = await DBHelper().database;
+    return db.rawQuery('''
+      SELECT s.id, s.total_amount, s.payment_method, s.sale_date,
+             c.phone AS phone, c.name AS name,
+             (SELECT COUNT(*) FROM sale_items si WHERE si.sale_id = s.id)
+               AS items_count
+      FROM sales s
+      JOIN customers c ON c.id = s.customer_id
+      WHERE s.status = ?
+      ORDER BY s.sale_date DESC
+      LIMIT ?
+    ''', [SaleStatus.completed, limit]);
+  }
+
   Future<int> recordSale({
     required List<Map<String, dynamic>> cartItems,
     required List<Map<String, dynamic>> payments,

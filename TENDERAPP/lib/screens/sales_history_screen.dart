@@ -41,7 +41,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF3F7EA),
       appBar: AppBar(
         title: const Text('Historial de Ventas'),
         backgroundColor: Colors.white,
@@ -64,14 +64,14 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                         leading: CircleAvatar(
                           backgroundColor: isCancelled
                               ? Colors.red.withOpacity(0.1)
-                              : const Color(0xFF00DF82).withOpacity(0.1),
+                              : const Color(0xFFC6F24E).withOpacity(0.1),
                           child: Icon(
                             isCancelled
                                 ? Icons.cancel_outlined
                                 : Icons.receipt_long,
                             color: isCancelled
                                 ? Colors.red
-                                : const Color(0xFF1A3C2B),
+                                : const Color(0xFF143122),
                           ),
                         ),
                         title: Row(
@@ -217,7 +217,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
             if (payments.isNotEmpty) ...[
               const Text('Pagos:',
                   style: TextStyle(
-                      fontWeight: FontWeight.bold, color: Colors.grey)),
+                      fontWeight: FontWeight.bold, color: Color(0xFF6B7280))),
               ...payments.map((p) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2),
                     child: Row(
@@ -251,7 +251,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                   style: const TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 18,
-                      color: Color(0xFF00DF82)),
+                      color: Color(0xFF143122)),
                 ),
               ],
             ),
@@ -304,8 +304,9 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
         final saleProvider =
             Provider.of<SaleProvider>(context, listen: false);
         await saleProvider.cancelSale(saleId);
-        Provider.of<StatisticsProvider>(context, listen: false)
-            .loadStatistics();
+        final now = DateTime.now();
+        Provider.of<StatisticsProvider>(context, listen: false).loadStatistics(
+            year: now.year, month: now.month, day: now.day);
         await _loadSales();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

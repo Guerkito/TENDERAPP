@@ -53,7 +53,7 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
     final difference = _countedCash - cashSales;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF3F7EA),
       appBar: AppBar(
         title: const Text('Cierre de Caja',
             style: TextStyle(fontWeight: FontWeight.bold)),
@@ -61,7 +61,7 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
       ),
       body: _isLoading
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF00DF82)))
+              child: CircularProgressIndicator(color: Color(0xFF143122)))
           : ListView(
               padding: const EdgeInsets.all(20),
               children: [
@@ -86,7 +86,7 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
       style: const TextStyle(
           fontSize: 17,
           fontWeight: FontWeight.w800,
-          color: Color(0xFF1A1A1A),
+          color: Color(0xFF0F1D14),
           letterSpacing: -0.5),
     );
   }
@@ -122,7 +122,7 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
       child: Column(
         children: [
           _buildSummaryRow('Total Ventas', stats.totalSalesAmount,
-              Icons.trending_up, const Color(0xFF00DF82)),
+              Icons.trending_up, const Color(0xFF143122)),
           const Divider(height: 20),
           ...stats.salesByPaymentMethod.entries
               .where((e) => e.value > 0)
@@ -141,7 +141,7 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
             'Utilidad Estimada',
             stats.totalSalesAmount - stats.totalExpenses,
             Icons.account_balance_wallet,
-            const Color(0xFF1A3C2B),
+            const Color(0xFF143122),
             bold: true,
           ),
           const SizedBox(height: 8),
@@ -151,7 +151,7 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
               Text(
                 '${stats.dailyTransactionCount} transacciones',
                 style:
-                    const TextStyle(color: Colors.grey, fontSize: 13),
+                    const TextStyle(color: Color(0xFF6B7280), fontSize: 13),
               ),
             ],
           ),
@@ -174,7 +174,7 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
               Text(label,
                   style: TextStyle(
                       fontSize: indent ? 13 : 14,
-                      color: indent ? Colors.grey[600] : const Color(0xFF1A1A1A),
+                      color: indent ? Colors.grey[600] : const Color(0xFF0F1D14),
                       fontWeight: bold ? FontWeight.w800 : FontWeight.normal)),
             ],
           ),
@@ -183,7 +183,7 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
             style: TextStyle(
                 fontWeight: bold ? FontWeight.w900 : FontWeight.w600,
                 fontSize: indent ? 13 : 14,
-                color: bold ? color : const Color(0xFF1A1A1A)),
+                color: bold ? color : const Color(0xFF0F1D14)),
           ),
         ],
       ),
@@ -218,7 +218,7 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
                 style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF1A3C2B)),
+                    color: Color(0xFF143122)),
               ),
             ],
           ),
@@ -240,19 +240,19 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
             width: 56,
             padding: const EdgeInsets.symmetric(vertical: 4),
             decoration: BoxDecoration(
-                color: const Color(0xFF00DF82).withOpacity(0.1),
+                color: const Color(0xFFC6F24E).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8)),
             alignment: Alignment.center,
             child: Text(label,
                 style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
-                    color: Color(0xFF1A3C2B))),
+                    color: Color(0xFF143122))),
           ),
           const SizedBox(width: 12),
           IconButton(
             icon: const Icon(Icons.remove_circle_outline,
-                color: Colors.grey, size: 22),
+                color: Color(0xFF6B7280), size: 22),
             onPressed: count > 0
                 ? () => setState(() => _denominations[denom] = count - 1)
                 : null,
@@ -272,7 +272,7 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
           const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.add_circle_outline,
-                color: Color(0xFF00DF82), size: 22),
+                color: Color(0xFF143122), size: 22),
             onPressed: () =>
                 setState(() => _denominations[denom] = count + 1),
             padding: EdgeInsets.zero,
@@ -281,7 +281,7 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
           const Spacer(),
           Text(
             count > 0 ? CurrencyFormatter.format((denom * count).toDouble()) : '',
-            style: const TextStyle(color: Colors.grey, fontSize: 13),
+            style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13),
           ),
         ],
       ),
@@ -294,7 +294,7 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
     final color = isExact
         ? Colors.green
         : isSurplus
-            ? Colors.blue
+            ? Color(0xFF143122)
             : const Color(0xFFFF3B30);
     final label = isExact
         ? 'Cuadre exacto'
@@ -325,11 +325,11 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
           const SizedBox(height: 4),
           Text(
             'Efectivo esperado: ${CurrencyFormatter.format(expected)}',
-            style: const TextStyle(color: Colors.grey, fontSize: 13),
+            style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13),
           ),
           Text(
             'Efectivo contado: ${CurrencyFormatter.format(_countedCash)}',
-            style: const TextStyle(color: Colors.grey, fontSize: 13),
+            style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13),
           ),
         ],
       ),

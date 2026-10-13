@@ -15,6 +15,7 @@ class _PinScreenState extends State<PinScreen>
     with SingleTickerProviderStateMixin {
   String _entered = '';
   String _errorMsg = '';
+  int _failedAttempts = 0;
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
 
@@ -59,21 +60,77 @@ class _PinScreenState extends State<PinScreen>
       setState(() {
         _entered = '';
         _errorMsg = 'PIN incorrecto';
+        _failedAttempts++;
       });
+    }
+  }
+
+  /// Escape del candado: tras 3 intentos, desactivar el PIN confirmando el
+  /// nombre del negocio (los datos locales no se pierden nunca).
+  Future<void> _forgotPin() async {
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Desactivar PIN'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Para desactivar el PIN, escribe el nombre exacto de tu negocio.',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del negocio',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('CANCELAR')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('DESACTIVAR')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    if (controller.text.trim().toLowerCase() ==
+        settings.storeName.trim().toLowerCase()) {
+      await settings.removePin();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'PIN desactivado. Puedes configurarlo de nuevo en Más → PIN de Seguridad.')));
+      widget.onSuccess();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('El nombre no coincide con tu negocio.')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A3C2B),
+      backgroundColor: const Color(0xFF143122),
       body: SafeArea(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Spacer(),
             const Icon(Icons.storefront_rounded,
-                color: Color(0xFF00DF82), size: 60),
+                color: Color(0xFFC6F24E), size: 60),
             const SizedBox(height: 16),
             const Text(
               'TenderApp',
@@ -111,7 +168,7 @@ class _PinScreenState extends State<PinScreen>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: i < _entered.length
-                          ? const Color(0xFF00DF82)
+                          ? const Color(0xFFC6F24E)
                           : Colors.white24,
                     ),
                   ),
@@ -153,6 +210,15 @@ class _PinScreenState extends State<PinScreen>
                 ],
               ),
             ),
+            if (_failedAttempts >= 3)
+              TextButton(
+                onPressed: _forgotPin,
+                child: const Text(
+                  '¿Olvidaste tu PIN?',
+                  style: TextStyle(
+                      color: Colors.white70, fontWeight: FontWeight.w600),
+                ),
+              ),
             const Spacer(),
           ],
         ),
@@ -296,7 +362,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A3C2B),
+      backgroundColor: const Color(0xFF143122),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
@@ -326,7 +392,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: i < _entered.length
-                        ? const Color(0xFF00DF82)
+                        ? const Color(0xFFC6F24E)
                         : Colors.white24,
                   ),
                 ),
