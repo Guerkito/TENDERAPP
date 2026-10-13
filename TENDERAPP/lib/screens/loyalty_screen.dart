@@ -4,6 +4,7 @@ import '../models/loyalty.dart';
 import '../models/customer_model.dart';
 import '../providers/customer_provider.dart';
 import '../providers/settings_provider.dart';
+import '../api/supabase_service.dart';
 import '../widgets/loyalty_widgets.dart';
 import 'customer_purchases_screen.dart';
 import '../constants/app_theme.dart';
@@ -103,6 +104,16 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                     ? 'Premio gratis'
                     : rewardController.text.trim(),
               );
+              // Publica la regla del premio para que la webapp la muestre.
+              try {
+                if (SupabaseService.isLoggedIn) {
+                  await SupabaseService.syncStore(settings.storeId, null,
+                      loyaltyGoal: settings.loyaltyGoal,
+                      loyaltyReward: settings.loyaltyReward);
+                }
+              } catch (e) {
+                debugPrint('Loyalty: no se pudo publicar el premio: $e');
+              }
               if (dialogContext.mounted) Navigator.pop(dialogContext);
               _refresh();
             },

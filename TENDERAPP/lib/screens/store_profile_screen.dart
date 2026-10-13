@@ -44,11 +44,8 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
       final settings = Provider.of<SettingsProvider>(context, listen: false);
       final rows = await Provider.of<CustomerProvider>(context, listen: false)
           .getLoyaltyBoard();
-      final storeId = await SupabaseService.syncStore(
-          settings.storeId,
-          settings.isNameSet ? settings.storeName : null,
-          loyaltyGoal: settings.loyaltyGoal,
-          loyaltyReward: settings.loyaltyReward);
+      final storeId =
+          await SupabaseService.syncStore(settings.storeId, null);
       if (storeId != settings.storeId) {
         await settings.updateStoreId(storeId);
       }

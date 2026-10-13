@@ -58,10 +58,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (SupabaseService.isLoggedIn) {
       try {
         final remoteId = await SupabaseService.syncStore(
-            settings.storeId,
-            settings.isNameSet ? settings.storeName : null,
-            loyaltyGoal: settings.loyaltyGoal,
-            loyaltyReward: settings.loyaltyReward);
+            settings.storeId, null);
         if (remoteId != settings.storeId) {
           await settings.updateStoreId(remoteId);
         }
