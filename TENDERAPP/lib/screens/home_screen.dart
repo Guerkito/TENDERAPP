@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../api/supabase_service.dart';
 import '../constants/app_theme.dart';
+import '../widgets/motion.dart';
 import '../providers/settings_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../widgets/business_type_picker.dart';
@@ -57,7 +58,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (SupabaseService.isLoggedIn) {
       try {
         final remoteId = await SupabaseService.syncStore(
-            settings.storeId, settings.storeName,
+            settings.storeId,
+            settings.isNameSet ? settings.storeName : null,
             loyaltyGoal: settings.loyaltyGoal,
             loyaltyReward: settings.loyaltyReward);
         if (remoteId != settings.storeId) {
@@ -208,8 +210,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   final item = _navItems[index];
                   final selected = index == navProvider.selectedIndex;
                   return Expanded(
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    child: PressScale(
+                      scale: 0.94,
                       onTap: () => navProvider.setIndex(index),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 220),

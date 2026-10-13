@@ -25,21 +25,30 @@ class LoyaltyStampRow extends StatelessWidget {
       runSpacing: 6,
       children: List.generate(goal, (i) {
         final won = i < filled;
-        return Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: won ? const Color(0xFFC6F24E) : const Color(0xFFEFF2F5),
-            border: Border.all(
-              color: won ? const Color(0xFF00B368) : const Color(0xFFDCE2E8),
-              width: 1.2,
+        final reduceMotion = MediaQuery.of(context).disableAnimations;
+        return TweenAnimationBuilder<double>(
+          key: ValueKey('$i-$won'),
+          tween: Tween(begin: won && !reduceMotion ? 0.4 : 1.0, end: 1.0),
+          duration: Duration(milliseconds: reduceMotion ? 0 : 260),
+          curve: Curves.easeOutBack,
+          builder: (context, scale, child) =>
+              Transform.scale(scale: scale, child: child),
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: won ? const Color(0xFFC6F24E) : const Color(0xFFEFF2F5),
+              border: Border.all(
+                color: won ? const Color(0xFFA9D63F) : const Color(0xFFDCE2E8),
+                width: 1.2,
+              ),
             ),
+            child: won
+                ? Icon(Icons.check,
+                    size: size * 0.6, color: const Color(0xFF143122))
+                : null,
           ),
-          child: won
-              ? Icon(Icons.check,
-                  size: size * 0.6, color: const Color(0xFF143122))
-              : null,
         );
       }),
     );

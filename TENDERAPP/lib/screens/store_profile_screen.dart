@@ -42,7 +42,8 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
       final rows = await Provider.of<CustomerProvider>(context, listen: false)
           .getLoyaltyBoard();
       final storeId = await SupabaseService.syncStore(
-          settings.storeId, settings.storeName,
+          settings.storeId,
+          settings.isNameSet ? settings.storeName : null,
           loyaltyGoal: settings.loyaltyGoal,
           loyaltyReward: settings.loyaltyReward);
       if (storeId != settings.storeId) {
@@ -269,9 +270,60 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
               ],
             ),
           ),
+          const SizedBox(width: 4),
+          IconButton(
+            tooltip: 'Cambiar nombre',
+            onPressed: () => _renameStore(settings),
+            icon:
+                const Icon(Icons.edit, color: Color(0xFFC6F24E), size: 20),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _renameStore(SettingsProvider settings) async {
+    final controller = TextEditingController(text: settings.storeName);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Nombre del negocio'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            labelText: 'Nombre',
+            hintText: 'Ej: Licorera Punto de Encuentro',
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('CANCELAR')),
+          ElevatedButton(
+              onPressed: () =>
+                  Navigator.pop(dialogContext, controller.text.trim()),
+              child: const Text('GUARDAR')),
+        ],
+      ),
+    );
+    if (name == null || name.isEmpty || !mounted) return;
+    await settings.updateStoreName(name);
+    // Publica el nombre en la nube para que el QR/webapp lo muestre.
+    try {
+      if (SupabaseService.isLoggedIn) {
+        await SupabaseService.syncStore(settings.storeId, name,
+            loyaltyGoal: settings.loyaltyGoal,
+            loyaltyReward: settings.loyaltyReward);
+      }
+    } catch (e) {
+      debugPrint('StoreProfile: no se pudo publicar el nombre: $e');
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nombre del negocio actualizado.')));
   }
 
   Widget _buildAccountCard() {

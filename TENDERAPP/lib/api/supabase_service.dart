@@ -108,11 +108,13 @@ class SupabaseService {
   /// Si la cuenta ya tiene tienda, devuelve su id remoto (para adoptarlo);
   /// si no, registra la tienda local. También publica la regla de
   /// fidelización (meta y premio) para que la webapp la muestre.
-  static Future<String> syncStore(String localStoreId, String name,
+  /// [name] solo se envía si el negocio ya tiene nombre propio: así un
+  /// dispositivo nuevo no pisa el nombre que otro ya configuró.
+  static Future<String> syncStore(String localStoreId, String? name,
       {int? loyaltyGoal, String? loyaltyReward}) async {
     final uid = currentUser!.id;
     final data = <String, dynamic>{
-      'name': name,
+      if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
       if (loyaltyGoal != null) 'loyalty_goal': loyaltyGoal,
       if (loyaltyReward != null) 'loyalty_reward': loyaltyReward,
     };
@@ -128,9 +130,12 @@ class SupabaseService {
       return remoteId;
     }
     try {
-      await client
-          .from('stores')
-          .insert({'id': localStoreId, 'owner_id': uid, ...data});
+      await client.from('stores').insert({
+        'id': localStoreId,
+        'owner_id': uid,
+        'name': (name == null || name.trim().isEmpty) ? 'Mi Tienda' : name.trim(),
+        ...data,
+      });
       return localStoreId;
     } catch (e) {
       final again = await client

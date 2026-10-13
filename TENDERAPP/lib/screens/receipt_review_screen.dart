@@ -35,7 +35,8 @@ class _ReceiptReviewScreenState extends State<ReceiptReviewScreen> {
     });
     try {
       final storeId = await SupabaseService.syncStore(
-          settings.storeId, settings.storeName,
+          settings.storeId,
+          settings.isNameSet ? settings.storeName : null,
           loyaltyGoal: settings.loyaltyGoal,
           loyaltyReward: settings.loyaltyReward);
       if (storeId != settings.storeId) {

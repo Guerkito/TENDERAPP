@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_theme.dart';
+import '../widgets/motion.dart';
 import '../providers/statistics_provider.dart';
 import '../providers/product_provider.dart';
 import '../providers/settings_provider.dart';
@@ -247,9 +248,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // no perder contraste sobre claro.
     final iconColor =
         color == AppColors.lime ? AppColors.ink : color;
-    return InkWell(
+    return PressScale(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
       child: Column(
         children: [
           Container(
@@ -325,8 +325,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(
-              CurrencyFormatter.format(value),
+            child: AnimatedCount(
+              value: value,
+              format: CurrencyFormatter.format,
               style: AppText.display.copyWith(fontSize: 24, color: valueColor),
             ),
           ),
