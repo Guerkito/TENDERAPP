@@ -241,10 +241,9 @@ packages:
   flutter_barcode_scanner:
     dependency: "direct main"
     description:
-      name: flutter_barcode_scanner
-      sha256: a4ba37daf9933f451a5e812c753ddd045d6354e4a3280342d895b07fecaab3fa
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/flutter_barcode_scanner"
+      relative: true
+    source: path
     version: "2.0.0"
   flutter_launcher_icons:
     dependency: "direct dev"

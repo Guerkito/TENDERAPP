@@ -17,7 +17,10 @@ dependencies:
   sqflite: ^2.3.3+1
   path: ^1.8.3 # Used for joining paths, common with sqflite
   provider: ^6.0.0
-  flutter_barcode_scanner: any # Se ajusta a 'any' para resolución automática de versión
+  # Copia local del plugin (ya no se mantiene) parcheada para el Flutter
+  # actual: se le quitó el registro de la embedding v1, que ya no existe.
+  flutter_barcode_scanner:
+    path: third_party/flutter_barcode_scanner
   table_calendar: ^3.0.9
   # flutter_vector_icons: ^2.0.0 # Removed in favor of phosphor_flutter
   fl_chart: ^0.68.0
