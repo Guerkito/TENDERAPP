@@ -4,9 +4,14 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'sync_schema.dart';
+
 class DBHelper {
   static final DBHelper _instance = DBHelper._internal();
   static Database? _database;
+
+  /// Versión del esquema local. Sube de a uno cada vez que hay migración.
+  static const int schemaVersion = 16;
 
   factory DBHelper() {
     return _instance;
@@ -36,6 +41,21 @@ class DBHelper {
     }
   }
 
+  /// Abre (o crea/migra) una base TenderApp en [path]. La usa la app para su
+  /// base normal y las pruebas para simular varios celulares a la vez.
+  static Future<Database> openAt(String path) {
+    debugPrint('DBHelper: database path: $path');
+    return openDatabase(
+      path,
+      version: schemaVersion,
+      onCreate: DBHelper()._onCreate,
+      onUpgrade: (db, oldV, newV) async {
+        debugPrint('DBHelper: migration $oldV -> $newV');
+        await DBHelper()._onUpgrade(db, oldV, newV);
+      },
+    );
+  }
+
   Future<Database> _initDB() async {
     try {
       String path;
@@ -45,17 +65,7 @@ class DBHelper {
       } else {
         path = join(await getDatabasesPath(), 'tender_app.db');
       }
-
-      debugPrint('DBHelper: database path: $path');
-      return await openDatabase(
-        path,
-        version: 15,
-        onCreate: _onCreate,
-        onUpgrade: (db, oldV, newV) async {
-          debugPrint('DBHelper: migration $oldV -> $newV');
-          await _onUpgrade(db, oldV, newV);
-        },
-      );
+      return await openAt(path);
     } catch (e) {
       debugPrint('DBHelper: FATAL error initializing database: $e');
       rethrow;
@@ -230,6 +240,78 @@ class DBHelper {
     ''');
 
     debugPrint('DBHelper: schema created at version $version');
+
+    await _createSyncSchema(db);
+  }
+
+  /// Objetos que hacen posible la sincronización entre celulares (v16):
+  /// - `updated_at` en cada tabla compartida (marca de cambio por fila),
+  ///   la estampan los triggers, sin que las pantallas tengan que hacer nada.
+  /// - `_sync_tombstones`: papelera de borrados, para que un borrado viaje.
+  /// - `_sync_meta`: bloque de ids de este celular y cursores de sincronización.
+  Future<void> _createSyncSchema(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS _sync_meta(
+        key TEXT PRIMARY KEY,
+        value TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS _sync_tombstones(
+        table_name TEXT NOT NULL,
+        row_id INTEGER NOT NULL,
+        deleted_at TEXT NOT NULL,
+        PRIMARY KEY (table_name, row_id)
+      )
+    ''');
+
+    for (final table in syncedTables) {
+      try {
+        await db.execute('ALTER TABLE $table ADD COLUMN updated_at TEXT');
+      } catch (e) {
+        // Ya existe: la migración se está repitiendo sobre una base al día.
+      }
+      try {
+        await db.execute(
+            'ALTER TABLE $table ADD COLUMN _dirty INTEGER NOT NULL DEFAULT 0');
+      } catch (e) {
+        // Ya existe.
+      }
+      await db.execute('''
+        CREATE TRIGGER IF NOT EXISTS trg_${table}_ins AFTER INSERT ON $table
+        WHEN NEW.updated_at IS NULL
+        BEGIN
+          UPDATE $table
+             SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'), _dirty = 1
+           WHERE id = NEW.id;
+        END
+      ''');
+      // Estampa solo si la escritura NO trajo su propia marca: la bajada de
+      // cambios remotos sí la trae (y no debe marcarse como cambio local).
+      await db.execute('''
+        CREATE TRIGGER IF NOT EXISTS trg_${table}_upd AFTER UPDATE ON $table
+        WHEN NEW.updated_at IS OLD.updated_at AND NEW._dirty IS OLD._dirty
+        BEGIN
+          UPDATE $table
+             SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'), _dirty = 1
+           WHERE id = NEW.id;
+        END
+      ''');
+      await db.execute('''
+        CREATE TRIGGER IF NOT EXISTS trg_${table}_del AFTER DELETE ON $table
+        BEGIN
+          INSERT OR REPLACE INTO _sync_tombstones(table_name, row_id, deleted_at)
+          VALUES ('$table', OLD.id, strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+        END
+      ''');
+    }
+
+    // Lo que ya existía se publica en la primera sincronización.
+    for (final table in syncedTables) {
+      await db.rawUpdate(
+          'UPDATE $table SET updated_at = ?, _dirty = 1 WHERE updated_at IS NULL',
+          [DateTime.now().toUtc().toIso8601String()]);
+    }
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -433,6 +515,10 @@ class DBHelper {
         )
       ''');
       debugPrint('DBHelper: upgraded to v15 (loyalty_movements table)');
+    }
+    if (oldVersion < 16) {
+      await _createSyncSchema(db);
+      debugPrint('DBHelper: upgraded to v16 (sincronización entre celulares)');
     }
   }
 }

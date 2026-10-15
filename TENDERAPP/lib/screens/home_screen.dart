@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
+import '../api/cloud_sync.dart';
 import '../api/supabase_service.dart';
 import '../constants/app_theme.dart';
 import '../widgets/motion.dart';
 import '../providers/settings_provider.dart';
 import '../providers/navigation_provider.dart';
+import '../providers/product_provider.dart';
+import '../providers/statistics_provider.dart';
 import '../widgets/business_type_picker.dart';
 import 'dashboard_screen.dart';
 import 'sales_screen.dart';
@@ -22,6 +26,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isUnlocked = false;
+  Timer? _syncTimer;
 
   @override
   void initState() {
@@ -30,12 +35,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initialize();
     });
+    // Cada 2 minutos trae lo de los otros celulares y publica lo de este.
+    _syncTimer = Timer.periodic(
+        const Duration(minutes: 2), (_) => _syncWithOtherDevices());
   }
 
   @override
   void dispose() {
+    _syncTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  /// Sincroniza y, si algo cambió, refresca lo que muestran las pantallas.
+  Future<void> _syncWithOtherDevices() async {
+    final done = await CloudSync.instance.syncNow();
+    if (!done || !mounted) return;
+    await Provider.of<ProductProvider>(context, listen: false).loadProducts();
+    if (!mounted) return;
+    final now = DateTime.now();
+    await Provider.of<StatisticsProvider>(context, listen: false)
+        .loadStatistics(year: now.year, month: now.month, day: now.day);
   }
 
   @override
@@ -75,6 +95,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!settings.isNameSet || !settings.isBusinessTypeSet) {
       _showOnboardingDialog(needsName: !settings.isNameSet);
     }
+
+    // Publica lo de este celular y trae lo de los demás (no bloquea la UI).
+    unawaited(_syncWithOtherDevices());
   }
 
   void _showOnboardingDialog({required bool needsName}) {

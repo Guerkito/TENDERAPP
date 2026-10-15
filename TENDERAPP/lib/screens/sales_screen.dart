@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../api/cloud_sync.dart';
 import '../constants/app_constants.dart';
 import '../constants/app_theme.dart';
 import '../models/product_model.dart';
@@ -706,6 +708,9 @@ class _SalesScreenState extends State<SalesScreen> {
         Provider.of<StatisticsProvider>(context, listen: false).loadStatistics(
             year: now.year, month: now.month, day: now.day);
       }
+
+      // Publica la venta para que los otros celulares la vean.
+      unawaited(CloudSync.instance.syncNow());
 
       setState(() {
         _cart.clear();

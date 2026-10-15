@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../api/supabase_service.dart';
+import '../api/cloud_sync.dart';
 import '../constants/business_types.dart';
 import '../demo_seed.dart';
 import '../models/loyalty.dart';
@@ -24,6 +25,7 @@ class StoreProfileScreen extends StatefulWidget {
 class _StoreProfileScreenState extends State<StoreProfileScreen> {
   late Future<List<LoyaltyBoardRow>> _future;
   bool _syncing = false;
+  bool _syncingCloud = false;
   bool _loadingDemo = false;
   String? _syncMessage;
 
@@ -221,6 +223,8 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
                 ...rows.map(_buildCardTile),
               const SizedBox(height: 20),
               _buildSyncCard(settings),
+              const SizedBox(height: 16),
+              _buildCloudCard(),
               const SizedBox(height: 28),
               Center(
                 child: TextButton.icon(
@@ -557,6 +561,97 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
         ],
       ),
     );
+  }
+
+  /// Sincronización entre todos los celulares de la cuenta: estado + botón.
+  Widget _buildCloudCard() {
+    final status = CloudSync.instance.status;
+    final device = status.deviceIndex;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0B7A4B).withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.devices_rounded,
+                    color: Color(0xFF0B7A4B), size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text('Sincronización entre celulares',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Las ventas, productos, clientes y gastos se comparten solos entre los celulares que tengan tu misma cuenta.',
+            style: TextStyle(fontSize: 13, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '${status.summary}${device == null ? '' : ' · Celular #$device'}',
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: status.error == null
+                  ? const Color(0xFF0B7A4B)
+                  : Colors.redAccent,
+            ),
+          ),
+          const SizedBox(height: 14),
+          FilledButton.icon(
+            onPressed: _syncingCloud ? null : _syncCloudNow,
+            icon: _syncingCloud
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Color(0xFF143122)))
+                : const Icon(Icons.sync, size: 18),
+            label: Text(_syncingCloud ? 'SINCRONIZANDO...' : 'SINCRONIZAR AHORA',
+                style: const TextStyle(
+                    fontWeight: FontWeight.w800, fontSize: 13)),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0B7A4B),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _syncCloudNow() async {
+    setState(() => _syncingCloud = true);
+    await CloudSync.instance.syncNow(force: true);
+    if (!mounted) return;
+    final error = CloudSync.instance.status.error;
+    await Provider.of<CustomerProvider>(context, listen: false)
+        .loadCustomers();
+    await Provider.of<ProductProvider>(context, listen: false).loadProducts();
+    if (!mounted) return;
+    setState(() {
+      _syncingCloud = false;
+      _future = Provider.of<CustomerProvider>(context, listen: false)
+          .getLoyaltyBoard();
+    });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(error ?? 'Listo: todo sincronizado con tus celulares.')));
   }
 
   Widget _buildSyncCard(SettingsProvider settings) {

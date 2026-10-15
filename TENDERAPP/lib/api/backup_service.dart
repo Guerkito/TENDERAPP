@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'cloud_sync.dart';
 import 'db_helper.dart';
 
 /// Error con mensaje en español para mostrar tal cual al tendero.
@@ -95,6 +96,9 @@ class BackupService {
       // Reabrir aquí mismo para detectar problemas ahora, no en el próximo
       // arranque de la app.
       final db = await DBHelper().database;
+      // La copia puede traer el bloque de ids, cursores y lápidas de otro
+      // celular: se renueva para que este vuelva a sincronizar desde cero.
+      await CloudSync.resetAfterRestore(db);
       final salesRows = await db.rawQuery('SELECT COUNT(*) AS n FROM sales');
       final customerRows =
           await db.rawQuery('SELECT COUNT(*) AS n FROM customers');
