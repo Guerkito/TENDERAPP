@@ -111,10 +111,14 @@ class SupabaseService {
   /// [name] solo se envía si el negocio ya tiene nombre propio: así un
   /// dispositivo nuevo no pisa el nombre que otro ya configuró.
   static Future<String> syncStore(String localStoreId, String? name,
-      {int? loyaltyGoal, String? loyaltyReward}) async {
+      {int? loyaltyGoal,
+      String? loyaltyReward,
+      String? businessType}) async {
     final uid = currentUser!.id;
     final data = <String, dynamic>{
       if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+      if (businessType != null && businessType.isNotEmpty)
+        'business_type': businessType,
       if (loyaltyGoal != null) 'loyalty_goal': loyaltyGoal,
       if (loyaltyReward != null) 'loyalty_reward': loyaltyReward,
     };
@@ -147,6 +151,19 @@ class SupabaseService {
       if (again != null) return again['id'] as String;
       rethrow;
     }
+  }
+
+  /// Lee la tienda de la cuenta. Con esto un celular nuevo hereda el nombre,
+  /// el tipo de negocio y la regla de sellos en vez de volver a preguntarlos.
+  static Future<Map<String, dynamic>?> fetchMyStore() async {
+    final uid = currentUser?.id;
+    if (uid == null) return null;
+    return await client
+        .from('stores')
+        .select('id, name, business_type, loyalty_goal, loyalty_reward')
+        .eq('owner_id', uid)
+        .limit(1)
+        .maybeSingle();
   }
 
   static Future<List<Map<String, dynamic>>> fetchPendingSubmissions(

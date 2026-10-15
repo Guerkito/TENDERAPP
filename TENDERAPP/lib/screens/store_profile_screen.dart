@@ -388,6 +388,7 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
     try {
       if (SupabaseService.isLoggedIn) {
         await SupabaseService.syncStore(settings.storeId, name,
+            businessType: settings.businessType,
             loyaltyGoal: settings.loyaltyGoal,
             loyaltyReward: settings.loyaltyReward);
       }

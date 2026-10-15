@@ -47,6 +47,53 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  /// Hereda de la nube lo que aquí todavía no está configurado (nunca pisa lo
+  /// que el usuario ya puso en este celular).
+  Future<void> _adoptRemoteStore(
+      SettingsProvider settings, Map<String, dynamic> remote) async {
+    final remoteId = remote['id'] as String?;
+    if (remoteId != null && remoteId != settings.storeId) {
+      await settings.updateStoreId(remoteId);
+    }
+    final remoteName = (remote['name'] as String?)?.trim();
+    if (!settings.isNameSet &&
+        remoteName != null &&
+        remoteName.isNotEmpty &&
+        remoteName != 'Mi Tienda') {
+      await settings.updateStoreName(remoteName);
+    }
+    final remoteType = remote['business_type'] as String?;
+    if (!settings.isBusinessTypeSet &&
+        remoteType != null &&
+        remoteType.isNotEmpty) {
+      await settings.updateBusinessType(remoteType);
+    }
+    final remoteGoal = (remote['loyalty_goal'] as num?)?.toInt();
+    final remoteReward = (remote['loyalty_reward'] as String?)?.trim();
+    if (settings.loyaltyGoal == 6 &&
+        settings.loyaltyReward == 'Premio gratis' &&
+        remoteGoal != null &&
+        remoteReward != null &&
+        remoteReward.isNotEmpty) {
+      await settings
+          .updateLoyaltyConfig(goal: remoteGoal, reward: remoteReward);
+    }
+  }
+
+  /// Publica nombre y tipo de negocio para que los otros celulares los hereden.
+  Future<void> _publishStore(SettingsProvider settings) async {
+    try {
+      await SupabaseService.syncStore(
+          settings.storeId, settings.isNameSet ? settings.storeName : null,
+          businessType:
+              settings.isBusinessTypeSet ? settings.businessType : null,
+          loyaltyGoal: settings.loyaltyGoal,
+          loyaltyReward: settings.loyaltyReward);
+    } catch (e) {
+      debugPrint('HomeScreen: no se pudo publicar el negocio: $e');
+    }
+  }
+
   /// Sincroniza y, si algo cambió, refresca lo que muestran las pantallas.
   Future<void> _syncWithOtherDevices() async {
     final done = await CloudSync.instance.syncNow();
@@ -73,14 +120,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final settings = Provider.of<SettingsProvider>(context, listen: false);
     await settings.loadSettings();
 
-    // Registra la tienda en el sistema de fidelización al iniciar sesión,
-    // para que el QR de los clientes funcione sin abrir otras pantallas.
+    // La tienda vive en la cuenta: un celular nuevo hereda de la nube el
+    // nombre, el tipo de negocio y la regla de sellos, en vez de volver a
+    // preguntarlos. Si la cuenta todavía no tiene tienda, se registra esta.
     if (SupabaseService.isLoggedIn) {
       try {
-        final remoteId = await SupabaseService.syncStore(
-            settings.storeId, null);
-        if (remoteId != settings.storeId) {
-          await settings.updateStoreId(remoteId);
+        final remote = await SupabaseService.fetchMyStore();
+        if (remote == null) {
+          final remoteId = await SupabaseService.syncStore(
+              settings.storeId, settings.isNameSet ? settings.storeName : null,
+              businessType:
+                  settings.isBusinessTypeSet ? settings.businessType : null);
+          if (remoteId != settings.storeId) {
+            await settings.updateStoreId(remoteId);
+          }
+        } else {
+          await _adoptRemoteStore(settings, remote);
         }
       } catch (e) {
         debugPrint('HomeScreen: no se pudo sincronizar la tienda: $e');
@@ -157,6 +212,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             .updateStoreName(nameController.text.trim());
                       }
                       await settings.updateBusinessType(selectedType!);
+                      if (SupabaseService.isLoggedIn) {
+                        unawaited(_publishStore(settings));
+                      }
                       if (dialogContext.mounted) {
                         Navigator.pop(dialogContext);
                       }
