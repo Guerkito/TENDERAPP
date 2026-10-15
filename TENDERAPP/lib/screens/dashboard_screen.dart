@@ -21,17 +21,43 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _isLoading = true;
+  late final NavigationProvider _nav;
 
   @override
   void initState() {
     super.initState();
+    _nav = Provider.of<NavigationProvider>(context, listen: false);
+    // La vista de Inicio no se destruye al cambiar de pestaña: hay que
+    // recargar el día cada vez que se vuelve a ella, porque otras pantallas
+    // (Estadísticas, Caja, cargar demo) dejan las cifras con otros filtros.
+    _nav.addListener(_onTabChanged);
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _nav.removeListener(_onTabChanged);
+    super.dispose();
+  }
+
+  void _onTabChanged() {
+    if (_nav.selectedIndex == 0) _loadData();
   }
 
   Future<void> _loadData() async {
     final now = DateTime.now();
-    await Provider.of<StatisticsProvider>(context, listen: false)
-        .loadStatistics(year: now.year, month: now.month, day: now.day);
+    try {
+      await Provider.of<StatisticsProvider>(context, listen: false)
+          .loadStatistics(year: now.year, month: now.month, day: now.day);
+    } catch (e) {
+      // Sin esto, un error dejaba el spinner girando para siempre.
+      debugPrint('Dashboard: no se pudieron cargar las cifras: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'No se pudieron cargar las cifras. Toca "Inicio" para reintentar.')));
+      }
+    }
     if (mounted) setState(() => _isLoading = false);
   }
 
