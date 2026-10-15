@@ -116,6 +116,15 @@
   .big-icon svg { width: 40px; height: 40px; }
   .hint { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.4; }
   .footer { margin-top: 20px; font-size: 11.5px; color: #9AA3AC; text-align: center; }
+  .scan-wrap {
+    position: relative; margin: 14px 0 6px; border-radius: 18px; overflow: hidden;
+    background: #0C1A12; aspect-ratio: 3 / 4; max-height: 60vh;
+  }
+  .scan-wrap video { width: 100%; height: 100%; object-fit: cover; }
+  .scan-frame {
+    position: absolute; inset: 12%; border: 3px solid var(--neon); border-radius: 18px;
+    box-shadow: 0 0 0 2000px rgba(0,0,0,.35);
+  }
 </style>
 </head>
 <body>
@@ -174,6 +183,17 @@
     <ul class="subs" id="purchasesList"></ul>
   </div>
 
+  <div class="card" id="scanCard" style="display:none">
+    <h2 class="center">Escanea el QR de la tienda</h2>
+    <p class="sub center">Apunta la cámara al código QR que está en el mostrador.</p>
+    <div class="scan-wrap">
+      <video id="scanVideo" playsinline muted autoplay></video>
+      <div class="scan-frame" aria-hidden="true"></div>
+    </div>
+    <div class="msg" id="scanMsg" role="status" aria-live="polite"></div>
+    <button type="button" class="ghost" id="scanClose">Cerrar</button>
+  </div>
+
   <div class="card" id="uploadCard" style="display:none">
     <h2>Sube tu factura</h2>
     <p class="sub">Toma o elige una foto clara de tu factura de compra.</p>
@@ -205,7 +225,7 @@ const PHONE_KEY = 'tenderapp_loyalty_phone';
 const $ = (id) => document.getElementById(id);
 const storeBox = $('storeBox'), card = $('card'), myCard = $('myCard'),
       subsCard = $('subsCard'), uploadCard = $('uploadCard'),
-      purchasesCard = $('purchasesCard');
+      purchasesCard = $('purchasesCard'), scanCard = $('scanCard');
 
 const digits = (v) => (v || '').replace(/\D/g, '');
 const savePhone = (v) => localStorage.setItem(PHONE_KEY, digits(v));
@@ -217,7 +237,7 @@ function showMsg(node, text, kind) {
 }
 function clearMsg(node) { node.className = 'msg'; node.textContent = ''; }
 
-function fatal(icon, title, text) {
+function fatal(icon, title, text, action) {
   card.innerHTML = '';
   const holder = document.createElement('div');
   holder.className = 'center';
@@ -227,8 +247,125 @@ function fatal(icon, title, text) {
   const h = document.createElement('h2'); h.textContent = title;
   const p = document.createElement('p'); p.className = 'sub'; p.textContent = text;
   holder.append(iconBox, h, p);
+  if (action) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = action.label;
+    btn.style.marginTop = '18px';
+    btn.addEventListener('click', action.onClick);
+    holder.appendChild(btn);
+  }
   card.appendChild(holder);
   card.style.display = 'block';
+}
+
+/* ------------------------------------------------ escáner de QR con cámara */
+let scanStream = null, scanTimer = null, scanDetector = null, jsqrLoading = null;
+
+/** Saca el código de tienda del contenido del QR (enlace completo o código suelto). */
+function scanStoreFromText(text) {
+  const match = String(text || '').match(/[?&]store=([A-Za-z0-9_-]{4,})/);
+  if (match) return match[1];
+  const only = String(text || '').trim();
+  return /^[A-Za-z0-9]{6,20}$/.test(only) ? only : null;
+}
+
+function loadJsQR() {
+  if (window.jsQR) return Promise.resolve(window.jsQR);
+  if (!jsqrLoading) {
+    jsqrLoading = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+      s.onload = () => resolve(window.jsQR);
+      s.onerror = () => reject(new Error('lector no disponible'));
+      document.head.appendChild(s);
+    });
+  }
+  return jsqrLoading;
+}
+
+async function startScan() {
+  clearMsg($('scanMsg'));
+  scanCard.style.display = 'block';
+  scanCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const video = $('scanVideo');
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } }, audio: false });
+    video.srcObject = scanStream;
+    await video.play().catch(() => {});
+  } catch (e) {
+    showMsg($('scanMsg'),
+      'No pudimos abrir la cámara. Revisa los permisos del navegador o abre el enlace del QR que te compartieron.',
+      'err');
+    return;
+  }
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if ('BarcodeDetector' in window) {
+    try {
+      scanDetector = new BarcodeDetector({ formats: ['qr_code'] });
+    } catch (_) {
+      scanDetector = null;
+    }
+  }
+
+  scanTimer = setInterval(async () => {
+    if (!scanStream || video.readyState < 2) return;
+    let text = null;
+    try {
+      if (scanDetector) {
+        const codes = await scanDetector.detect(video);
+        if (codes && codes.length) text = codes[0].rawValue;
+      } else {
+        const jsQR = await loadJsQR();
+        const w = video.videoWidth, h = video.videoHeight;
+        if (!w || !h) return;
+        canvas.width = Math.min(w, 480);
+        canvas.height = Math.round(h * (canvas.width / w));
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const found = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+        if (found && found.data) text = found.data;
+      }
+    } catch (e) {
+      // Si el lector falla, se sigue intentando con los siguientes cuadros.
+    }
+    const id = text ? scanStoreFromText(text) : null;
+    if (id) {
+      stopScan();
+      location.replace('?store=' + encodeURIComponent(id));
+    }
+  }, 350);
+}
+
+function stopScan() {
+  if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
+  if (scanStream) {
+    scanStream.getTracks().forEach((t) => t.stop());
+    scanStream = null;
+  }
+  const video = $('scanVideo');
+  if (video) video.srcObject = null;
+  scanCard.style.display = 'none';
+}
+
+/** Achica la foto antes de subirla: las cámaras de hoy sacan fotos pesadas. */
+async function shrinkPhoto(file, maxSide = 1600, quality = 0.82) {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) =>
+      canvas.toBlob(resolve, 'image/jpeg', quality));
+    return blob || file;
+  } catch (e) {
+    return file; // si el navegador no puede, se sube la original
+  }
 }
 
 const ICON_WAIT = '<svg viewBox="0 0 24 24" fill="none" stroke="#143122" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
@@ -394,7 +531,9 @@ async function loadCard() {
     return;
   }
   if (!data) { // tienda no encontrada
-    fatal(ICON_WAIT, 'Tienda no encontrada', 'Pide el QR actualizado en el mostrador de la tienda.');
+    fatal(ICON_WAIT, 'Tienda no encontrada',
+      'Pide el QR actualizado en el mostrador de la tienda o escanéalo otra vez.',
+      { label: 'ESCANEAR OTRO QR', onClick: startScan });
     return;
   }
   renderCard(data);
@@ -408,7 +547,8 @@ function openUpload() {
 function init() {
   if (!storeId) {
     fatal(ICON_WAIT, 'Escanea el QR de la tienda',
-      'Esta página se abre escaneando el código QR que está en el mostrador de tu tienda.');
+      'Abre la cámara y apunta al código QR que está en el mostrador; también puedes pedir el enlace en tu tienda.',
+      { label: 'ESCANEAR CON LA CÁMARA', onClick: startScan });
     return;
   }
 
@@ -452,6 +592,8 @@ function init() {
   $('cancelUpload').addEventListener('click', () => {
     uploadCard.style.display = 'none';
   });
+  $('scanClose').addEventListener('click', stopScan);
+
   $('changePhoneBtn').addEventListener('click', () => {
     localStorage.removeItem(PHONE_KEY);
     myCard.style.display = 'none';
@@ -485,11 +627,18 @@ function init() {
 
     btn.disabled = true; btn.textContent = 'ENVIANDO...';
     try {
-      const ext = (photo.name.split('.').pop() || 'jpg').toLowerCase();
+      // Se achica la foto (la cámara del celular saca fotos muy pesadas).
+      const shrunk = await shrinkPhoto(photo);
+      const resized = shrunk !== photo;
+      const ext = resized
+        ? 'jpg'
+        : ((photo.name.split('.').pop() || 'jpg').toLowerCase());
       const path = `${storeId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from('invoices')
-        .upload(path, photo, { contentType: photo.type || 'image/jpeg' });
+        .upload(path, shrunk, {
+          contentType: resized ? 'image/jpeg' : (photo.type || 'image/jpeg')
+        });
       if (upErr) throw upErr;
       const { error: dbErr } = await supabase.from('receipt_submissions').insert({
         store_id: storeId,
