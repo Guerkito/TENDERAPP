@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#143122">
+<title>Licorera Punto de Encuentro — App y facturas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --forest: #143122; --neon: #C6F24E; --neon-soft: rgba(198,242,78,.20);
+    --cream: #F3F7EA; --muted: #5F6B63; --line: #E3E6EA; --ink: #1A1A1A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--cream); min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; padding: 26px 16px 44px;
+    font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--ink);
+  }
+  .wrap { width: 100%; max-width: 460px; }
+  .store {
+    background: var(--forest); color: #fff; border-radius: 22px; padding: 18px;
+    display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
+  }
+  .store .dot {
+    width: 46px; height: 46px; border-radius: 50%; background: var(--neon-soft);
+    display: flex; align-items: center; justify-content: center; flex: none;
+  }
+  .store .dot svg { width: 24px; height: 24px; }
+  .store h1 { font-family: 'Anton', 'Nunito', sans-serif; font-size: 18px; font-weight: 400;
+              letter-spacing: .4px; text-transform: uppercase; line-height: 1.2; }
+  .store p { font-size: 12.5px; color: #9BE8C6; font-weight: 700; }
+  .card { background: #fff; border-radius: 24px; padding: 22px 20px; margin-bottom: 16px; }
+  h2 { font-family: 'Anton', 'Nunito', sans-serif; font-size: 19px; font-weight: 400; margin-bottom: 6px; }
+  .sub { font-size: 13.5px; color: var(--muted); line-height: 1.45; margin-bottom: 4px; }
+  .btn {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 17px 18px; margin-top: 14px; border-radius: 18px; text-decoration: none;
+    font-size: 15px; font-weight: 900; letter-spacing: .2px;
+    background: var(--neon); color: var(--forest);
+  }
+  .btn.alt { background: var(--forest); color: #fff; }
+  .btn.ghost {
+    background: #fff; color: var(--forest); border: 1.5px solid var(--neon);
+    font-weight: 800; font-size: 14px;
+  }
+  .btn svg { width: 26px; height: 26px; flex: none; }
+  .btn small { display: block; font-size: 11.5px; font-weight: 700; opacity: .75; letter-spacing: 0; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 12px; line-height: 1.45; }
+  .footer { margin-top: 18px; font-size: 11.5px; color: #9AA3AC; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="store">
+    <div class="dot">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#143122" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M5 12v8h14v-8"/></svg>
+    </div>
+    <div>
+      <h1>Licorera Punto de Encuentro</h1>
+      <p>App de la tienda y tarjeta de sellos</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Descarga la app</h2>
+    <p class="sub">Con la app vendes, controlas el inventario, el fiado y los sellos de tus clientes. Funciona sin internet y se sincroniza entre los celulares de la tienda.</p>
+    <a class="btn" href="https://github.com/Guerkito/TENDERAPP/releases/latest/download/TenderApp.apk">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 21h16"/></svg>
+      <span>DESCARGAR LA APP (ANDROID)<small>Versión 1.0.0 · gratis · 71 MB</small></span>
+    </a>
+    <a class="btn alt" href="?store=thn22xf154j71h&subir=1">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.2"/></svg>
+      <span>SUBIR MI FACTURA<small>Para que te sumen el sello de tu compra</small></span>
+    </a>
+    <p class="hint">Para instalar en Android: abre el archivo descargado y acepta “instalar de fuentes desconocidas”. En iPhone, busca <b>TenderApp</b> en el App Store.</p>
+  </div>
+
+  <div class="card">
+    <h2>Tu tarjeta de sellos</h2>
+    <p class="sub">Junta 6 sellos y gana <b>1 cerveza Águila gratis</b>. Mira cuántos llevas y tus últimas compras.</p>
+    <a class="btn ghost" href="?store=thn22xf154j71h">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/><path d="M6 15h4"/></svg>
+      <span>VER MIS SELLOS</span>
+    </a>
+  </div>
+
+  <p class="footer">Hecho con TenderApp</p>
+</div>
+</body>
+</html>
