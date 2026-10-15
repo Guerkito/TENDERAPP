@@ -567,6 +567,12 @@ function init() {
       $('phone').value = phone;
       await loadCard();
     }
+
+    // Enlace directo para subir la factura: ?store=...&subir=1
+    if (new URLSearchParams(location.search).get('subir') === '1' &&
+        savedPhone().length >= 7) {
+      openUpload();
+    }
   })();
 
   $('phoneForm').addEventListener('submit', async (e) => {
