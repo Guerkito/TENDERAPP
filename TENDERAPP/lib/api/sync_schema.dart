@@ -16,6 +16,7 @@ const List<String> syncedTables = [
   'customer_movements',
   'loyalty_movements',
   'purchase_items',
+  'supplier_appointments',
 ];
 
 /// Columnas que apuntan a otra tabla: si esa tabla se renumera, la columna se

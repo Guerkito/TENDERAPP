@@ -11,7 +11,7 @@ class DBHelper {
   static Database? _database;
 
   /// Versión del esquema local. Sube de a uno cada vez que hay migración.
-  static const int schemaVersion = 16;
+  static const int schemaVersion = 17;
 
   factory DBHelper() {
     return _instance;
@@ -519,6 +519,25 @@ class DBHelper {
     if (oldVersion < 16) {
       await _createSyncSchema(db);
       debugPrint('DBHelper: upgraded to v16 (sincronización entre celulares)');
+    }
+    if (oldVersion < 17) {
+      // El calendario de visitas pasa a sincronizarse: se le crean sus marcas
+      // de cambio y, si este celular ya está activado, sus ids entran al
+      // bloque del celular (antes no se habían renumerado).
+      await _createSyncSchema(db);
+      final meta = await db.query('_sync_meta',
+          columns: ['value'],
+          where: 'key = ?',
+          whereArgs: ['device_index'],
+          limit: 1);
+      final index =
+          meta.isEmpty ? null : int.tryParse((meta.first['value'] as String?) ?? '');
+      if (index != null) {
+        await db.rawUpdate(
+            'UPDATE supplier_appointments SET id = id + ? WHERE id < ?',
+            [index * idNamespace, idNamespace]);
+      }
+      debugPrint('DBHelper: upgraded to v17 (calendario de visitas)');
     }
   }
 }

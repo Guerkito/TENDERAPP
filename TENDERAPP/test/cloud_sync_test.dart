@@ -315,4 +315,29 @@ void main() {
         reason: 'nada cambió: no debe volver a subirse la misma fila');
     expect(cloud.rows['products']!.length, 1);
   });
+
+  test('las visitas de proveedores también viajan entre celulares', () async {
+    final supplier = await a.insert('suppliers', {
+      'name': 'Bavaria S.A.',
+      'contact_person': 'Carolina Gómez',
+      'phone': '320 444 1100',
+    });
+    await a.insert('supplier_appointments', {
+      'supplier_id': supplier,
+      'appointment_date': DateTime.now()
+          .add(const Duration(days: 1))
+          .toIso8601String(),
+      'notes': 'Reposición de cervezas y hielo',
+    });
+
+    await a.sync.syncNow(force: true);
+    await b.sync.syncNow(force: true);
+
+    final visitas = await b.all('supplier_appointments');
+    expect(visitas.length, 1);
+    expect(visitas.first['notes'], 'Reposición de cervezas y hielo');
+    final proveedores = await b.all('suppliers');
+    expect(proveedores.length, 1);
+    expect(proveedores.first['name'], 'Bavaria S.A.');
+  });
 }
